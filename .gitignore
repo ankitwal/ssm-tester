@@ -1,6 +1,7 @@
+# IntelliJ
+.idea/
 # envrc for loading AWS Credentials
 .envrc
-
 # local tooling
 .tool-versions
 
