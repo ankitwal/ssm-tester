@@ -2,18 +2,80 @@ package tester
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/aws/aws-sdk-go-v2/service/ssm/types"
-	"log"
+	"github.com/gruntwork-io/terratest/modules/retry"
+	"testing"
+	"time"
 )
 
-func TcpConnectionTestWithNameTag(client commandSenderLister, tagName string, endpoint string, port string) (interface{}, error) {
+// Return true if connection is possible
+// Returns false if tcp connection is not established
+// Returns an error if there is an error.
+func TcpConnectionTestWithNameTag(t *testing.T, client commandSenderLister, tagName string, endpoint string, port string) (bool, error) {
 	sendCommandOutput, err := client.SendCommand(context.Background(), buildSendCommandInputForTcpConnectionWithNameTag(endpoint, port, tagName))
 	if err != nil {
-		log.Fatal(err.Error())
+		t.Error(err)
 	}
-	return sendCommandOutput, err
+	retryAction := getListCommandAction(t, client, *sendCommandOutput.Command.CommandId)
+	result, err := retry.DoWithRetryInterfaceE(t, "Poll For Invocation Results", 5, 3*time.Second, retryAction)
+	switch err.(type) {
+	case retry.FatalError:
+		// if FatalError Fail immediately
+		t.Errorf(err.Error())
+	case retry.MaxRetriesExceeded:
+		// return false and error
+		return false, errors.New(err.(retry.MaxRetriesExceeded).Error())
+	case nil:
+		return result.(bool), nil
+	}
+	return result.(bool), nil
+}
+
+func getListCommandAction(t *testing.T, client commandLister, commandId string) func() (interface{}, error) {
+	return func() (interface{}, error) {
+		listCommandOutput, err := client.ListCommandInvocations(context.Background(), buildListCommandInput(commandId))
+		if err != nil {
+			t.Error(err)
+		}
+		if len(listCommandOutput.CommandInvocations) == 0 {
+			// Todo Log message to help debugging
+			return nil, errors.New("No invocations found yet, force retry")
+		}
+
+		//Check status of all found invocations
+		result, err := checkAllInvocationForStatus(listCommandOutput)
+		if err != nil {
+			return nil, err
+		}
+		return result, nil
+	}
+}
+
+// Returns true if all the invocations have succeeded.
+// Returns false if any of the invocations has failed
+// Returns an error, signalling to the retry function to try again in the case of pending, inprogress or delayed invocaiton
+func checkAllInvocationForStatus(listCommandOutput *ssm.ListCommandInvocationsOutput) (bool, error) {
+	for _, v := range listCommandOutput.CommandInvocations {
+		switch v.Status {
+		case types.CommandInvocationStatusPending,
+			types.CommandInvocationStatusInProgress,
+			types.CommandInvocationStatusDelayed:
+			// Todo log message about why retry
+			return false, errors.New("Force retry")
+		case types.CommandInvocationStatusFailed,
+			types.CommandInvocationStatusCancelled,
+			types.CommandInvocationStatusCancelling,
+			types.CommandInvocationStatusTimedOut:
+			// Todo log message to help debug failure
+			// return false and nil error to signal retry to stop and to return false to the user
+			return false, nil
+		}
+	}
+	// In the case that all the invocations were Successful
+	return true, nil
 }
 
 func buildListCommandInput(commandId string) *ssm.ListCommandInvocationsInput {
