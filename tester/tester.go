@@ -6,30 +6,24 @@ import (
 	"fmt"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/aws/aws-sdk-go-v2/service/ssm/types"
-	"github.com/gruntwork-io/terratest/modules/retry"
+	"log"
 	"testing"
 	"time"
 )
 
-// Return true if connection is possible
-// Returns false if tcp connection is not established
-// Returns an error if there is an error.
-func TcpConnectionTestWithNameTag(t *testing.T, client commandSenderLister, tagName string, endpoint string, port string) (bool, error) {
+// Return true if instances are found and all instance can run connection command successfully
+// Returns false and an error if no instances are found to match the Name tag
+// Returns false and an error if any one of the instances cannot run the command successfully or within timeout.
+// Returns false and error for any other error
+func TcpConnectionTestWithNameTagE(t *testing.T, client commandSenderLister, tagName string, endpoint string, port string) (bool, error) {
 	sendCommandOutput, err := client.SendCommand(context.Background(), buildSendCommandInputForTcpConnectionWithNameTag(endpoint, port, tagName))
 	if err != nil {
-		t.Error(err)
+		return false, err
 	}
 	retryAction := getListCommandAction(t, client, *sendCommandOutput.Command.CommandId)
-	result, err := retry.DoWithRetryInterfaceE(t, "Poll For Invocation Results", 5, 3*time.Second, retryAction)
-	switch err.(type) {
-	case retry.FatalError:
-		// if FatalError Fail immediately
-		t.Errorf(err.Error())
-	case retry.MaxRetriesExceeded:
-		// return false and error
-		return false, errors.New(err.(retry.MaxRetriesExceeded).Error())
-	case nil:
-		return result.(bool), nil
+	result, err := retry(t, "Poll For Invocation Results", 5, 3*time.Second, retryAction)
+	if err != nil {
+		return false, err
 	}
 	return result.(bool), nil
 }
@@ -42,7 +36,7 @@ func getListCommandAction(t *testing.T, client commandLister, commandId string) 
 		}
 		if len(listCommandOutput.CommandInvocations) == 0 {
 			// Todo Log message to help debugging
-			return nil, errors.New("No invocations found yet, force retry")
+			return nil, noInvocationFoundError{}
 		}
 
 		//Check status of all found invocations
@@ -64,14 +58,14 @@ func checkAllInvocationForStatus(listCommandOutput *ssm.ListCommandInvocationsOu
 			types.CommandInvocationStatusInProgress,
 			types.CommandInvocationStatusDelayed:
 			// Todo log message about why retry
-			return false, errors.New("Force retry")
+			return false, errors.New("command invocations pending or delayed")
 		case types.CommandInvocationStatusFailed,
 			types.CommandInvocationStatusCancelled,
 			types.CommandInvocationStatusCancelling,
 			types.CommandInvocationStatusTimedOut:
 			// Todo log message to help debug failure
 			// return false and nil error to signal retry to stop and to return false to the user
-			return false, nil
+			return false, FatalError{Underlying: failedForInstanceIdError{instanceId: *v.InstanceId}}
 		}
 	}
 	// In the case that all the invocations were Successful
@@ -91,23 +85,10 @@ func buildListCommandInput(commandId string) *ssm.ListCommandInvocationsInput {
 
 func buildSendCommandInputForTcpConnectionWithNameTag(endpoint string, port string, tagName string) *ssm.SendCommandInput {
 	return &ssm.SendCommandInput{
-		DocumentName:           stringPointer("AWS-RunShellScript"),
-		CloudWatchOutputConfig: nil,
-		Comment:                nil,
-		DocumentHash:           nil,
-		DocumentHashType:       "",
-		DocumentVersion:        nil,
-		InstanceIds:            nil,
-		MaxConcurrency:         nil,
-		MaxErrors:              nil,
-		NotificationConfig:     nil,
-		OutputS3BucketName:     nil,
-		OutputS3KeyPrefix:      nil,
-		OutputS3Region:         nil,
-		Parameters:             buildParametersForTcpConnection(endpoint, port),
-		ServiceRoleArn:         nil,
-		Targets:                buildTargetsFromNameTag(tagName),
-		TimeoutSeconds:         0,
+		DocumentName:    stringPointer("AWS-RunShellScript"),
+		DocumentVersion: stringPointer("$LATEST"),
+		Parameters:      buildParametersForTcpConnection(endpoint, port),
+		Targets:         buildTargetsFromNameTag(tagName),
 	}
 }
 func buildParametersForTcpConnection(endpoint string, port string) map[string][]string {
@@ -115,9 +96,13 @@ func buildParametersForTcpConnection(endpoint string, port string) map[string][]
 	return buildParametersForCommand(command)
 }
 func buildParametersForCommand(command []string) map[string][]string {
+	const (
+		commands         = "commands"
+		executionTimeout = "executionTimeout"
+	)
 	parameters := map[string][]string{}
-	parameters["command"] = command
-	parameters["executionTimeout"] = []string{"5"}
+	parameters[commands] = command
+	parameters[executionTimeout] = []string{"5"}
 	return parameters
 }
 func buildTargetsFromNameTag(tagName string) []types.Target {
@@ -127,4 +112,62 @@ func buildTargetsFromNameTag(tagName string) []types.Target {
 func stringPointer(s string) *string {
 	temp := s
 	return &temp
+}
+
+// retry runs the specified action. If it returns a value, return that value. If it returns a FatalError, return that error
+// immediately. If it returns any other type of error, sleep for sleepBetweenRetries and try again, up to a maximum of
+// maxRetries retries. If maxRetries is exceeded, return a MaxRetriesExceeded error.
+func retry(t *testing.T, actionDescription string, maxRetries int, sleepBetweenRetries time.Duration, action func() (interface{}, error)) (interface{}, error) {
+	var output interface{}
+	var err error
+
+	for i := 0; i <= maxRetries; i++ {
+
+		output, err = action()
+		if err == nil {
+			return output, nil
+		}
+
+		if _, isFatalErr := err.(FatalError); isFatalErr {
+			log.Printf("Returning due to fatal error: %v", err)
+			return output, err
+		}
+
+		log.Printf("%s returned an error: %s. Sleeping for %s and will try again.", actionDescription, err.Error(), sleepBetweenRetries)
+		time.Sleep(sleepBetweenRetries)
+	}
+
+	return output, maxRetriesExceededError{underlying: err}
+}
+
+// FatalError is a marker interface for errors that should not be retried.
+type FatalError struct {
+	Underlying error
+}
+
+func (err FatalError) Error() string {
+	return fmt.Sprintf("FatalError{Underlying: %v}", err.Underlying)
+}
+
+type maxRetriesExceededError struct {
+	underlying error
+}
+
+func (m maxRetriesExceededError) Error() string {
+	return fmt.Sprintf("max retires exceeded - last underlying error: %s", m.underlying.Error())
+}
+
+type noInvocationFoundError struct {
+}
+
+func (err noInvocationFoundError) Error() string {
+	return "no invocations found"
+}
+
+type failedForInstanceIdError struct {
+	instanceId string
+}
+
+func (err failedForInstanceIdError) Error() string {
+	return fmt.Sprintf("command invocations failed for instanceId %s", err.instanceId)
 }

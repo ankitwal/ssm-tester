@@ -2,8 +2,6 @@ package tester
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/aws/aws-sdk-go-v2/service/ssm/types"
 	"github.com/aws/smithy-go/middleware"
@@ -58,7 +56,7 @@ func TestTcpConnectionTest(t *testing.T) {
 			endpoint:      "dummyEndpoint",
 			port:          "dummyPort",
 			expected:      false,
-			expectedError: errors.New("no invocations of command found, please ensure that targets exists and are configured with SSM"),
+			expectedError: maxRetriesExceededError{underlying: noInvocationFoundError{}},
 		},
 		{
 			caseName: "Should return true if command invocation completes successfully",
@@ -165,14 +163,19 @@ func TestTcpConnectionTest(t *testing.T) {
 			endpoint:      "dummyEndpoint",
 			port:          "dummyPort",
 			expected:      false,
-			expectedError: errors.New(fmt.Sprintf("invocation command failed for instance %s", "dummyInstanceId")),
+			expectedError: FatalError{Underlying: failedForInstanceIdError{instanceId: "dummyInstanceId"}},
 		},
 	}
 	for _, c := range cases {
 		t.Run(c.caseName, func(t *testing.T) {
-			actual, actualErr := TcpConnectionTestWithNameTag(t, c.client(t), c.tagName, c.endpoint, c.port)
+			actual, actualErr := TcpConnectionTestWithNameTagE(t, c.client(t), c.tagName, c.endpoint, c.port)
 			if (c.expectedError != nil && actualErr == nil) || (c.expectedError == nil && actualErr != nil) {
 				t.Errorf("Expected error %v, but got %v", c.expectedError, actualErr)
+			}
+			if c.expectedError != nil && actualErr != nil {
+				if c.expectedError.Error() != actualErr.Error() {
+					t.Errorf("Expected error message to be %s, but got %s", c.expectedError.Error(), actualErr.Error())
+				}
 			}
 			if actual != c.expected {
 				t.Errorf("Expected %v, but got %v", c.expected, actual)
