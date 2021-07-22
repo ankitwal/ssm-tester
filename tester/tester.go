@@ -6,12 +6,11 @@ import (
 	"fmt"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/aws/aws-sdk-go-v2/service/ssm/types"
-	"log"
 	"testing"
 	"time"
 )
 
-func sendCommandAndPollResults(t *testing.T, client commandSenderLister, sendCommandInput *ssm.SendCommandInput) (bool, error) {
+func sendCommandAndPollResults(t *testing.T, client commandSenderLister, sendCommandInput *ssm.SendCommandInput, maxRetries int, waitBetweenRetries time.Duration) (bool, error) {
 	// Command Sender
 	sendCommandOutput, err := client.SendCommand(context.Background(), sendCommandInput)
 	if err != nil {
@@ -19,7 +18,7 @@ func sendCommandAndPollResults(t *testing.T, client commandSenderLister, sendCom
 	}
 	// Command Result Poller
 	retryAction := getListCommandAction(t, client, *sendCommandOutput.Command.CommandId)
-	result, err := retry(t, "Poll For Invocation Results", 5, 3*time.Second, retryAction)
+	result, err := retry(t, "Poll For Invocation Results", maxRetries, waitBetweenRetries, retryAction)
 	if err != nil {
 		return false, err
 	}
@@ -98,54 +97,11 @@ func checkAllInvocationForStatus(listCommandOutput *ssm.ListCommandInvocationsOu
 			types.CommandInvocationStatusTimedOut:
 			// Todo log message to help debug failure
 			// return false and nil error to signal retry to stop and to return false to the user
-			return false, FatalError{Underlying: failedForInstanceIdError{instanceId: *v.InstanceId}}
+			return false, fatalError{Underlying: failedForInstanceIdError{instanceId: *v.InstanceId}}
 		}
 	}
 	// In the case that all the invocations were Successful
 	return true, nil
-}
-
-// retry runs the specified action. If it returns a value, return that value. If it returns a FatalError, return that error
-// immediately. If it returns any other type of error, sleep for sleepBetweenRetries and try again, up to a maximum of
-// maxRetries retries. If maxRetries is exceeded, return a MaxRetriesExceeded error.
-func retry(t *testing.T, actionDescription string, maxRetries int, sleepBetweenRetries time.Duration, action func() (interface{}, error)) (interface{}, error) {
-	var output interface{}
-	var err error
-
-	for i := 0; i <= maxRetries; i++ {
-
-		output, err = action()
-		if err == nil {
-			return output, nil
-		}
-
-		if _, isFatalErr := err.(FatalError); isFatalErr {
-			log.Printf("Returning due to fatal error: %v", err)
-			return output, err
-		}
-
-		log.Printf("%s returned an error: %s. Sleeping for %s and will try again.", actionDescription, err.Error(), sleepBetweenRetries)
-		time.Sleep(sleepBetweenRetries)
-	}
-
-	return output, maxRetriesExceededError{underlying: err}
-}
-
-// FatalError is a marker interface for errors that should not be retried.
-type FatalError struct {
-	Underlying error
-}
-
-func (err FatalError) Error() string {
-	return fmt.Sprintf("fatalError stopped immediately - underlying error: %v}", err.Underlying)
-}
-
-type maxRetriesExceededError struct {
-	underlying error
-}
-
-func (m maxRetriesExceededError) Error() string {
-	return fmt.Sprintf("max retires exceeded - last underlying error: %s", m.underlying.Error())
 }
 
 type noInvocationFoundError struct {
@@ -161,10 +117,4 @@ type failedForInstanceIdError struct {
 
 func (err failedForInstanceIdError) Error() string {
 	return fmt.Sprintf("command invocations failed for instanceId %s", err.instanceId)
-}
-
-// Util
-func stringPointer(s string) *string {
-	temp := s
-	return &temp
 }

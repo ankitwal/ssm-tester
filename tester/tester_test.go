@@ -6,6 +6,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ssm/types"
 	"github.com/aws/smithy-go/middleware"
 	"testing"
+	"time"
 )
 
 // Mock that satisfies the commandSenderLister interface
@@ -163,12 +164,15 @@ func TestTcpConnectionTest(t *testing.T) {
 			endpoint:      "dummyEndpoint",
 			port:          "dummyPort",
 			expected:      false,
-			expectedError: FatalError{Underlying: failedForInstanceIdError{instanceId: "dummyInstanceId"}},
+			expectedError: fatalError{Underlying: failedForInstanceIdError{instanceId: "dummyInstanceId"}},
 		},
 	}
 	for _, c := range cases {
 		t.Run(c.caseName, func(t *testing.T) {
-			actual, actualErr := TcpConnectionTestWithNameTagE(t, c.client(t), c.tagName, c.endpoint, c.port)
+			// Make the unit tests run faster with no wait between retries
+			defaultMaxRetries, defaultWaitBetweenRetries := 5, 0*time.Second
+			
+			actual, actualErr := TcpConnectionTestWithNameTagE(t, c.client(t), c.tagName, c.endpoint, c.port, defaultMaxRetries, defaultWaitBetweenRetries)
 			if (c.expectedError != nil && actualErr == nil) || (c.expectedError == nil && actualErr != nil) {
 				t.Errorf("Expected error %v, but got %v", c.expectedError, actualErr)
 			}
@@ -205,4 +209,8 @@ func mockSendCommandHelper(t *testing.T) func(ctx context.Context, params *ssm.S
 			ResultMetadata: middleware.Metadata{},
 		}, nil
 	}
+}
+
+func TestTcpConnectionTestWithNameTagE(t *testing.T) {
+
 }

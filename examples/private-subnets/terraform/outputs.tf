@@ -7,6 +7,12 @@ output "database_subnet_group_name" {
 output "database_subnet_group" {
   value = module.aws_vpc.database_subnet_group
 }
+output "instance_name_tag" {
+  value = local.project
+}
+output "database_port" {
+  value = module.db.db_instance_port
+}
 output "database_endpoint" {
-  value = module.db.db_instance_endpoint
+  value = module.db.db_instance_address
 }
