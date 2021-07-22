@@ -195,7 +195,7 @@ func mockSendCommandHelper(t *testing.T) func(ctx context.Context, params *ssm.S
 			t.Errorf("Expected DocumentName to be set to %s, got %s", e, a)
 		}
 		// Parameters Command should be set correctly
-		if e, a := `bash -c '</dev/tcp/dummyEndpoint/dummyPort'`, params.Parameters["command"][0]; e != a {
+		if e, a := `bash -c '</dev/tcp/dummyEndpoint/dummyPort'`, params.Parameters["commands"][0]; e != a {
 			t.Errorf("Expected DocumentName to be set to %s, got %s", e, a)
 		}
 		return &ssm.SendCommandOutput{

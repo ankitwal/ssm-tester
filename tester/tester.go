@@ -11,21 +11,54 @@ import (
 	"time"
 )
 
-// Return true if instances are found and all instance can run connection command successfully
-// Returns false and an error if no instances are found to match the Name tag
-// Returns false and an error if any one of the instances cannot run the command successfully or within timeout.
-// Returns false and error for any other error
-func TcpConnectionTestWithNameTagE(t *testing.T, client commandSenderLister, tagName string, endpoint string, port string) (bool, error) {
-	sendCommandOutput, err := client.SendCommand(context.Background(), buildSendCommandInputForTcpConnectionWithNameTag(endpoint, port, tagName))
+func sendCommandAndPollResults(t *testing.T, client commandSenderLister, sendCommandInput *ssm.SendCommandInput) (bool, error) {
+	// Command Sender
+	sendCommandOutput, err := client.SendCommand(context.Background(), sendCommandInput)
 	if err != nil {
 		return false, err
 	}
+	// Command Result Poller
 	retryAction := getListCommandAction(t, client, *sendCommandOutput.Command.CommandId)
 	result, err := retry(t, "Poll For Invocation Results", 5, 3*time.Second, retryAction)
 	if err != nil {
 		return false, err
 	}
 	return result.(bool), nil
+}
+
+func buildListCommandInput(commandId string) *ssm.ListCommandInvocationsInput {
+	return &ssm.ListCommandInvocationsInput{
+		CommandId:  &commandId,
+		Details:    false,
+		Filters:    nil,
+		InstanceId: nil,
+		MaxResults: 0,
+		NextToken:  nil,
+	}
+}
+
+func buildSendCommandInput(parameters map[string][]string, targets []types.Target) *ssm.SendCommandInput {
+	const (
+		awsShellScript  = "AWS-RunShellScript"
+		documentVersion = "$LATEST"
+	)
+	return &ssm.SendCommandInput{
+		DocumentName:    stringPointer(awsShellScript),
+		DocumentVersion: stringPointer(documentVersion),
+		Parameters:      parameters,
+		Targets:         targets,
+	}
+}
+
+func buildParametersForCommand(command []string, timeout string) map[string][]string {
+	const (
+		commands         = "commands"
+		executionTimeout = "executionTimeout"
+	)
+	parameters := map[string][]string{}
+	parameters[commands] = command
+	parameters[executionTimeout] = []string{timeout}
+	return parameters
 }
 
 func getListCommandAction(t *testing.T, client commandLister, commandId string) func() (interface{}, error) {
@@ -50,7 +83,7 @@ func getListCommandAction(t *testing.T, client commandLister, commandId string) 
 
 // Returns true if all the invocations have succeeded.
 // Returns false if any of the invocations has failed
-// Returns an error, signalling to the retry function to try again in the case of pending, inprogress or delayed invocaiton
+// Returns an error, signalling to the retry function to try again in the case of pending, in progress or delayed invocation
 func checkAllInvocationForStatus(listCommandOutput *ssm.ListCommandInvocationsOutput) (bool, error) {
 	for _, v := range listCommandOutput.CommandInvocations {
 		switch v.Status {
@@ -70,48 +103,6 @@ func checkAllInvocationForStatus(listCommandOutput *ssm.ListCommandInvocationsOu
 	}
 	// In the case that all the invocations were Successful
 	return true, nil
-}
-
-func buildListCommandInput(commandId string) *ssm.ListCommandInvocationsInput {
-	return &ssm.ListCommandInvocationsInput{
-		CommandId:  &commandId,
-		Details:    false,
-		Filters:    nil,
-		InstanceId: nil,
-		MaxResults: 0,
-		NextToken:  nil,
-	}
-}
-
-func buildSendCommandInputForTcpConnectionWithNameTag(endpoint string, port string, tagName string) *ssm.SendCommandInput {
-	return &ssm.SendCommandInput{
-		DocumentName:    stringPointer("AWS-RunShellScript"),
-		DocumentVersion: stringPointer("$LATEST"),
-		Parameters:      buildParametersForTcpConnection(endpoint, port),
-		Targets:         buildTargetsFromNameTag(tagName),
-	}
-}
-func buildParametersForTcpConnection(endpoint string, port string) map[string][]string {
-	command := []string{fmt.Sprintf("bash -c '</dev/tcp/%s/%s'", endpoint, port)}
-	return buildParametersForCommand(command)
-}
-func buildParametersForCommand(command []string) map[string][]string {
-	const (
-		commands         = "commands"
-		executionTimeout = "executionTimeout"
-	)
-	parameters := map[string][]string{}
-	parameters[commands] = command
-	parameters[executionTimeout] = []string{"5"}
-	return parameters
-}
-func buildTargetsFromNameTag(tagName string) []types.Target {
-	values := []string{tagName}
-	return []types.Target{{Key: stringPointer("tag:Name"), Values: values}}
-}
-func stringPointer(s string) *string {
-	temp := s
-	return &temp
 }
 
 // retry runs the specified action. If it returns a value, return that value. If it returns a FatalError, return that error
@@ -146,7 +137,7 @@ type FatalError struct {
 }
 
 func (err FatalError) Error() string {
-	return fmt.Sprintf("FatalError{Underlying: %v}", err.Underlying)
+	return fmt.Sprintf("fatalError stopped immediately - underlying error: %v}", err.Underlying)
 }
 
 type maxRetriesExceededError struct {
@@ -170,4 +161,10 @@ type failedForInstanceIdError struct {
 
 func (err failedForInstanceIdError) Error() string {
 	return fmt.Sprintf("command invocations failed for instanceId %s", err.instanceId)
+}
+
+// Util
+func stringPointer(s string) *string {
+	temp := s
+	return &temp
 }
