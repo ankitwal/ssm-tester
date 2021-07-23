@@ -10,6 +10,7 @@ import (
 // retry runs the specified action. If it returns a value, return that value. If it returns a fatalError, return that error
 // immediately. If it returns any other type of error, sleep for sleepBetweenRetries and try again, up to a maximum of
 // maxRetries retries. If maxRetries is exceeded, return a MaxRetriesExceeded error.
+// based on terratest RetryWithInterface - needed some custom code to wrap and propagate underlying errors for MaxRetriesExceeded
 func retry(t *testing.T, actionDescription string, maxRetries int, waitBetweenRetries time.Duration, action func() (interface{}, error)) (interface{}, error) {
 	var output interface{}
 	var err error
