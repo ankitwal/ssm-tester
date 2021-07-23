@@ -38,8 +38,5 @@ func TestInfra(t *testing.T) {
 	// the number of time to sleep between retries
 	waitBetweenRetries := 3 * time.Second
 	// run the test and check for errors. If no errors are returned the command is success ful for all instances
-	_, err = tester.TcpConnectionTestWithNameTagE(t, ssm.NewFromConfig(config), tag, dbEndpoint, dbPort, maxRetriesToPollResult, waitBetweenRetries)
-	if err != nil {
-		t.Error(err)
-	}
+	tester.TcpConnectionTestWithNameTag(t, ssm.NewFromConfig(config), tag, dbEndpoint, dbPort, maxRetriesToPollResult, waitBetweenRetries)
 }
