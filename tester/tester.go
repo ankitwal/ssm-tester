@@ -1,3 +1,5 @@
+// Package tester enables execution of test commands on target EC2 instances via the AWS Systems Manager(SSM).
+// tester will poll AWS SSM API for the success or failure of the command sent to target VMs and report success of failures accordingly.
 package tester
 
 import (

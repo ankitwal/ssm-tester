@@ -1,5 +1,3 @@
-// This file contains code that is inspired from Gruntwork's Terratest Retry module. It includes the original Notice and Licence
-// at the end of the file.
 package tester
 
 import (
