@@ -71,14 +71,15 @@ func TestInfra(t *testing.T) {
 	t.Run("TestEchoCommandViaCustomeTestCase", func(t *testing.T) {
 		t.Parallel()
 		// get the required resource values using terratest's terraform module
-		testCase := tester.NewTestCase("echo test", true, 2)
+		testCase := tester.NewTestCase("xxx", true, 2)
 		tag := terraform.Output(t, terraformOptions, "instance_name_tag")
+		tagNameTarget := tester.NewTagNameTarget(tag)
 		// the number of times you want the tester to retry polling for the result of the test command
 		maxRetriesToPollResult := 5
 		// the number of time to sleep between retries
 		waitBetweenRetries := 3 * time.Second
 		// run the test and check for errors. If no errors are returned the command is success ful for all instances
-		tester.UseThisToTest(t, ssmClient, testCase,tag, maxRetriesToPollResult, waitBetweenRetries)
+		tester.UseThisToTest(t, ssmClient, testCase, tagNameTarget, maxRetriesToPollResult, waitBetweenRetries)
 	})
 
 }

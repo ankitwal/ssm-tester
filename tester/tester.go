@@ -8,24 +8,23 @@ import (
 	"fmt"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/aws/aws-sdk-go-v2/service/ssm/types"
-	"log"
 	"testing"
 	"time"
 )
 
 // Todo rename
-func UseThisToTest(t *testing.T, client commandSenderLister, testCase ShellTestCase, tagName string,
-	maxRetries int, waitBetweenRetries time.Duration)  {
-		_, err := UseThisToTestE(t,client, testCase, tagName, maxRetries, waitBetweenRetries)
+func UseThisToTest(t *testing.T, client commandSenderLister, testCase ShellTestCase, target targetParamBuilder,
+	maxRetries int, waitBetweenRetries time.Duration) {
+	_, err := UseThisToTestE(t, client, testCase, target, maxRetries, waitBetweenRetries)
 	if err != nil {
 		t.Error(err)
 	}
 }
 
-func UseThisToTestE(t *testing.T, client commandSenderLister, testCase ShellTestCase, tagName string,
+func UseThisToTestE(t *testing.T, client commandSenderLister, testCase ShellTestCase, target targetParamBuilder,
 	maxRetries int, waitBetweenRetries time.Duration) (bool, error) {
 	// Command Sender
-	sendCommandInput := newSendCommandInput(testCase, tagName)
+	sendCommandInput := newSendCommandInput(testCase, target)
 	sendCommandOutput, err := client.SendCommand(context.Background(), sendCommandInput)
 	if err != nil {
 		return false, err
@@ -39,12 +38,12 @@ func UseThisToTestE(t *testing.T, client commandSenderLister, testCase ShellTest
 	return result.(bool), nil
 }
 
-func newSendCommandInput(testCase ShellTestCase, tagName string) *ssm.SendCommandInput {
+func newSendCommandInput(testCase ShellTestCase, target targetParamBuilder) *ssm.SendCommandInput {
 	return &ssm.SendCommandInput{
 		DocumentName:    stringPointer(testCase.documentName()),
 		DocumentVersion: stringPointer(testCase.documentVersion()),
 		Parameters:      testCase.buildCommandParameters(),
-		Targets:         buildTargetsFromNameTag(tagName),
+		Targets:         target.buildTargetParameters(),
 	}
 }
 
