@@ -83,5 +83,23 @@ module "endpoints" {
       route_table_ids = [module.aws_vpc.default_route_table_id]
       tags            = { Name = "s3-vpc-endpoint" }
     },
+
+    ## endpoints for application
+    # Logging
+    cloudwatch_logs = {
+      service             = "logs"
+      private_dns_enabled = true
+      security_group_ids  = [module.aws_vpc.default_security_group_id]
+      subnet_ids          = module.aws_vpc.intra_subnets
+      tags                = { Name = "cloudwatchlog-vpc-endpoint" }
+    },
+    # Monitoring
+    cloudwatch_monitoring = {
+      service             = "monitoring"
+      private_dns_enabled = true
+      security_group_ids  = [module.aws_vpc.default_security_group_id]
+      subnet_ids          = module.aws_vpc.intra_subnets
+      tags                = { Name = "cloudwatchlog-vpc-endpoint" }
+    }
   }
 }
