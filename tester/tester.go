@@ -13,6 +13,41 @@ import (
 	"time"
 )
 
+// Todo rename
+func UseThisToTest(t *testing.T, client commandSenderLister, testCase ShellTestCase, tagName string,
+	maxRetries int, waitBetweenRetries time.Duration)  {
+		_, err := UseThisToTestE(t,client, testCase, tagName, maxRetries, waitBetweenRetries)
+	if err != nil {
+		t.Error(err)
+	}
+}
+
+func UseThisToTestE(t *testing.T, client commandSenderLister, testCase ShellTestCase, tagName string,
+	maxRetries int, waitBetweenRetries time.Duration) (bool, error) {
+	// Command Sender
+	sendCommandInput := newSendCommandInput(testCase, tagName)
+	sendCommandOutput, err := client.SendCommand(context.Background(), sendCommandInput)
+	if err != nil {
+		return false, err
+	}
+	// Command Result Poller
+	retryAction := getListCommandAction(t, client, *sendCommandOutput.Command.CommandId)
+	result, err := retry(t, "Poll For Invocation Results", maxRetries, waitBetweenRetries, retryAction)
+	if err != nil {
+		return false, err
+	}
+	return result.(bool), nil
+}
+
+func newSendCommandInput(testCase ShellTestCase, tagName string) *ssm.SendCommandInput {
+	return &ssm.SendCommandInput{
+		DocumentName:    stringPointer(testCase.documentName()),
+		DocumentVersion: stringPointer(testCase.documentVersion()),
+		Parameters:      testCase.buildCommandParameters(),
+		Targets:         buildTargetsFromNameTag(tagName),
+	}
+}
+
 func sendCommandAndPollResults(t *testing.T, client commandSenderLister, sendCommandInput *ssm.SendCommandInput, maxRetries int, waitBetweenRetries time.Duration) (bool, error) {
 	// Command Sender
 	sendCommandOutput, err := client.SendCommand(context.Background(), sendCommandInput)

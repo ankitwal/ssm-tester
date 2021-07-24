@@ -211,6 +211,54 @@ func mockSendCommandHelper(t *testing.T) func(ctx context.Context, params *ssm.S
 	}
 }
 
-func TestTcpConnectionTestWithNameTagE(t *testing.T) {
+func TestUseThisToTest(t *testing.T) {
+	var cases = []struct {
+		caseName      string
+		client        func(t *testing.T) *mockClient
+		tagName       string
+		testCase      ShellTestCase
+		expected      interface{}
+		expectedError error
+	}{
+		{
+			caseName: "Should pass the test on all instances working ",
+			client: func(t *testing.T) *mockClient {
+				return &mockClient{
+					mockSendCommand: mockSendCommandHelper(t),
+					mockListCommandInvocations: []func(ctx context.Context, params *ssm.ListCommandInvocationsInput, optFns ...func(*ssm.Options)) (output *ssm.ListCommandInvocationsOutput, e error){
+						func(ctx context.Context, params *ssm.ListCommandInvocationsInput, optFns ...func(*ssm.Options)) (output *ssm.ListCommandInvocationsOutput, e error) {
+							// CommandId should be should be set correctly
+							if e, a := "dummyCommandId", *params.CommandId; e != a {
+								t.Errorf("Expected CommandId to be %s, got %s", e, a)
+							}
+							return &ssm.ListCommandInvocationsOutput{}, nil
+						}},
+				}
+			},
+			tagName:       "ec2NameTag",
+			testCase:      NewTestCase("echo lol", true, 5),
+			expected:      false,
+			expectedError: maxRetriesExceededError{underlying: noInvocationFoundError{}},
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.caseName, func(t *testing.T) {
+			// Make the unit tests run faster with no wait between retries
+			defaultMaxRetries, defaultWaitBetweenRetries := 5, 0*time.Second
+
+			actual, actualErr := UseThisToTest(t, c.client(t), c.testCase, c.tagName, defaultMaxRetries, defaultWaitBetweenRetries)
+			if (c.expectedError != nil && actualErr == nil) || (c.expectedError == nil && actualErr != nil) {
+				t.Errorf("Expected error %v, but got %v", c.expectedError, actualErr)
+			}
+			if c.expectedError != nil && actualErr != nil {
+				if c.expectedError.Error() != actualErr.Error() {
+					t.Errorf("Expected error message to be %s, but got %s", c.expectedError.Error(), actualErr.Error())
+				}
+			}
+			if actual != c.expected {
+				t.Errorf("Expected %v, but got %v", c.expected, actual)
+			}
+		})
+	}
 
 }
