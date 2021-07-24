@@ -47,21 +47,6 @@ func newSendCommandInput(testCase ShellTestCase, target targetParamBuilder) *ssm
 	}
 }
 
-func sendCommandAndPollResults(t *testing.T, client commandSenderLister, sendCommandInput *ssm.SendCommandInput, maxRetries int, waitBetweenRetries time.Duration) (bool, error) {
-	// Command Sender
-	sendCommandOutput, err := client.SendCommand(context.Background(), sendCommandInput)
-	if err != nil {
-		return false, err
-	}
-	// Command Result Poller
-	retryAction := getListCommandAction(t, client, *sendCommandOutput.Command.CommandId)
-	result, err := retry(t, "Poll For Invocation Results", maxRetries, waitBetweenRetries, retryAction)
-	if err != nil {
-		return false, err
-	}
-	return result.(bool), nil
-}
-
 func buildListCommandInput(commandId string) *ssm.ListCommandInvocationsInput {
 	return &ssm.ListCommandInvocationsInput{
 		CommandId:  &commandId,
@@ -71,30 +56,6 @@ func buildListCommandInput(commandId string) *ssm.ListCommandInvocationsInput {
 		MaxResults: 0,
 		NextToken:  nil,
 	}
-}
-
-func buildSendCommandInput(parameters map[string][]string, targets []types.Target) *ssm.SendCommandInput {
-	const (
-		awsShellScript  = "AWS-RunShellScript"
-		documentVersion = "$LATEST"
-	)
-	return &ssm.SendCommandInput{
-		DocumentName:    stringPointer(awsShellScript),
-		DocumentVersion: stringPointer(documentVersion),
-		Parameters:      parameters,
-		Targets:         targets,
-	}
-}
-
-func buildParametersForCommand(command []string, timeout string) map[string][]string {
-	const (
-		commands         = "commands"
-		executionTimeout = "executionTimeout"
-	)
-	parameters := map[string][]string{}
-	parameters[commands] = command
-	parameters[executionTimeout] = []string{timeout}
-	return parameters
 }
 
 func getListCommandAction(t *testing.T, client commandLister, commandId string) func() (interface{}, error) {
