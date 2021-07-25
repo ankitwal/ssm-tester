@@ -11,7 +11,17 @@ import (
 	"time"
 )
 
-// Todo Documentation
+// RunTestCaseForTarget runs a test for the provided testCase, target and retry related configuration
+// It fails the test if no instances are found to match the target.
+// It fails the test if any one of the instances cannot run the testCase successfully or within timeout, or any other error.
+// It passes the test if all found instances targets run the testCase successfully in the given timeouts.
+//
+// testCase is provides to configuration for the SSM SenCommandInput Parameters that define what command to run on the target instances.
+// target provides the the configuration of which ec2 instances should be targeted for the test.
+//
+// maxRetries specifies the number of times the test should poll AWS API for results of the command sent to the target EC2 VMs.
+// waitBetweenRetires specifies the duration in time.Seconds to wait between each retry.
+// These values may need to be adjusted for type of command and the total number of ec2 instances that are expected to run the test command.
 func RunTestCaseForTarget(t *testing.T, client commandSenderLister, testCase commandParameterBuilder, target targetParamBuilder,
 	maxRetries int, waitBetweenRetries time.Duration) {
 	_, err := RunTestCaseForTargetE(t, client, testCase, target, maxRetries, waitBetweenRetries)
@@ -20,8 +30,7 @@ func RunTestCaseForTarget(t *testing.T, client commandSenderLister, testCase com
 	}
 }
 
-// Todo Documentation
-// RunTestCaseForTargetE accepts a testCase, target and some retry related configuration and uses AWS SSM to run
+// RunTestCaseForTargetE is like RunTestCaseForTarget but returns a bool and error
 // It returns false and an error if no instances are found to match the Name tag.
 // It returns false and an error if any one of the instances cannot run the command successfully or within timeout.
 // It returns false and error for any other error.

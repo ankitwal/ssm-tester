@@ -41,7 +41,7 @@ func TestInfra(t *testing.T) {
 		dbEndpoint := terraform.Output(t, terraformOptions, "database_endpoint")
 		dbPort := terraform.Output(t, terraformOptions, "database_port")
 		tag := terraform.Output(t, terraformOptions, "instance_name_tag")
-		tester.TcpConnectionTestWithNameTag(t, ssmClient, tag, dbEndpoint, dbPort, maxRetriesToPollResult, waitBetweenRetries)
+		tester.TcpConnectionTestWithTagName(t, ssmClient, tag, dbEndpoint, dbPort, maxRetriesToPollResult, waitBetweenRetries)
 	})
 	t.Run("TestAppInstanceConnectivityToLoggingService", func(t *testing.T) {
 		t.Parallel()
@@ -49,7 +49,7 @@ func TestInfra(t *testing.T) {
 		loggingEndpoint := terraform.Output(t, terraformOptions, "logging_endpoint")
 		loggingPort := "443"
 		tag := terraform.Output(t, terraformOptions, "instance_name_tag")
-		tester.TcpConnectionTestWithNameTag(t, ssmClient, tag, loggingEndpoint, loggingPort, maxRetriesToPollResult, waitBetweenRetries)
+		tester.TcpConnectionTestWithTagName(t, ssmClient, tag, loggingEndpoint, loggingPort, maxRetriesToPollResult, waitBetweenRetries)
 	})
 	t.Run("TestAppInstanceConnectivityToMonitoringService", func(t *testing.T) {
 		t.Parallel()
@@ -57,7 +57,7 @@ func TestInfra(t *testing.T) {
 		monitoringEndpoint := terraform.Output(t, terraformOptions, "monitoring_endpoint")
 		monitoringPort := "443"
 		tag := terraform.Output(t, terraformOptions, "instance_name_tag")
-		tester.TcpConnectionTestWithNameTag(t, ssmClient, tag, monitoringEndpoint, monitoringPort, maxRetriesToPollResult, waitBetweenRetries)
+		tester.TcpConnectionTestWithTagName(t, ssmClient, tag, monitoringEndpoint, monitoringPort, maxRetriesToPollResult, waitBetweenRetries)
 	})
 	t.Run("TestAppInstanceShouldNotHaveConnectivityToPublicInternet", func(t *testing.T) {
 		t.Parallel()
