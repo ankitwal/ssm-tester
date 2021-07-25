@@ -14,7 +14,7 @@ import (
 
 // Todo rename
 // Todo add documentaion
-func UseThisToTest(t *testing.T, client commandSenderLister, testCase ShellTestCase, target targetParamBuilder,
+func UseThisToTest(t *testing.T, client commandSenderLister, testCase commandParameterBuilder, target targetParamBuilder,
 	maxRetries int, waitBetweenRetries time.Duration) {
 	_, err := UseThisToTestE(t, client, testCase, target, maxRetries, waitBetweenRetries)
 	if err != nil {
@@ -41,7 +41,7 @@ func UseThisToTestE(t *testing.T, client commandSenderLister, testCase ShellTest
 	return result.(bool), nil
 }
 
-func newSendCommandInput(testCase ShellTestCase, target targetParamBuilder) *ssm.SendCommandInput {
+func newSendCommandInput(testCase commandParameterBuilder, target targetParamBuilder) *ssm.SendCommandInput {
 	return &ssm.SendCommandInput{
 		DocumentName:    stringPointer(testCase.documentName()),
 		DocumentVersion: stringPointer(testCase.documentVersion()),
@@ -86,7 +86,7 @@ func checkAllInvocationForStatus(listCommandOutput *ssm.ListCommandInvocationsOu
 			types.CommandInvocationStatusInProgress,
 			types.CommandInvocationStatusDelayed:
 			// Todo log message about why retry
-			return false, errors.New("command invocations pending or delayed")
+			return false, invocationsIncompleteError{}
 		case types.CommandInvocationStatusFailed,
 			types.CommandInvocationStatusCancelled,
 			types.CommandInvocationStatusCancelling,
@@ -98,6 +98,13 @@ func checkAllInvocationForStatus(listCommandOutput *ssm.ListCommandInvocationsOu
 	}
 	// In the case that all the invocations were Successful
 	return true, nil
+}
+
+type invocationsIncompleteError struct {
+}
+
+func (err invocationsIncompleteError) Error() string {
+	return "command invocations pending, inprogress or delayed"
 }
 
 type noInvocationFoundError struct {

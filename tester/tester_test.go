@@ -249,7 +249,7 @@ func TestUseThisToTestE(t *testing.T) {
 			caseName: "Should return false with an appropriate error if no invocations are found ",
 			client: func(t *testing.T) *mockClient {
 				return &mockClient{
-					mockSendCommand: mockSendCommandHelper2(t, NewTagNameTarget("ec2NameTag"), NewTestCase("echo lol", true, 5)),
+					mockSendCommand: mockSendCommandHelper2(t, NewTagNameTarget("ec2NameTag"), NewShellTestCase("echo lol", true)),
 					mockListCommandInvocations: []func(ctx context.Context, params *ssm.ListCommandInvocationsInput, optFns ...func(*ssm.Options)) (output *ssm.ListCommandInvocationsOutput, e error){
 						func(ctx context.Context, params *ssm.ListCommandInvocationsInput, optFns ...func(*ssm.Options)) (output *ssm.ListCommandInvocationsOutput, e error) {
 							// CommandId should be should be set correctly
@@ -261,7 +261,7 @@ func TestUseThisToTestE(t *testing.T) {
 				}
 			},
 			target:        NewTagNameTarget("ec2NameTag"),
-			testCase:      NewTestCase("echo lol", true, 5),
+			testCase:      NewShellTestCase("echo lol", true),
 			expected:      false,
 			expectedError: maxRetriesExceededError{underlying: noInvocationFoundError{}},
 		},
@@ -269,7 +269,7 @@ func TestUseThisToTestE(t *testing.T) {
 			caseName: "Should return true if command invocation completes successfully",
 			client: func(t *testing.T) *mockClient {
 				return &mockClient{
-					mockSendCommand: mockSendCommandHelper2(t, NewTagNameTarget("ec2NameTag"), NewTestCase("echo lol", true, 5)),
+					mockSendCommand: mockSendCommandHelper2(t, NewTagNameTarget("ec2NameTag"), NewShellTestCase("echo lol", true)),
 					mockListCommandInvocations: []func(ctx context.Context, params *ssm.ListCommandInvocationsInput, optFns ...func(*ssm.Options)) (output *ssm.ListCommandInvocationsOutput, e error){
 						func(ctx context.Context, params *ssm.ListCommandInvocationsInput, optFns ...func(*ssm.Options)) (output *ssm.ListCommandInvocationsOutput, e error) {
 							return &ssm.ListCommandInvocationsOutput{
@@ -287,15 +287,43 @@ func TestUseThisToTestE(t *testing.T) {
 				}
 			},
 			target:        NewTagNameTarget("ec2NameTag"),
-			testCase:      NewTestCase("echo lol", true, 5),
+			testCase:      NewShellTestCase("echo lol", true ),
 			expected:      true,
 			expectedError: nil,
+		}, {
+			caseName: "Should return false if command invocation Pending, Delayed or InProgress after max retries",
+			client: func(t *testing.T) *mockClient {
+				return &mockClient{
+					mockSendCommand: mockSendCommandHelper2(t, NewTagNameTarget("ec2NameTag"), NewShellTestCase("echo lol", true)),
+					mockListCommandInvocations: []func(ctx context.Context, params *ssm.ListCommandInvocationsInput, optFns ...func(*ssm.Options)) (output *ssm.ListCommandInvocationsOutput, e error){
+						func(ctx context.Context, params *ssm.ListCommandInvocationsInput, optFns ...func(*ssm.Options)) (output *ssm.ListCommandInvocationsOutput, e error) {
+							return &ssm.ListCommandInvocationsOutput{
+								CommandInvocations: []types.CommandInvocation{
+									{
+										Status: types.CommandInvocationStatusInProgress,
+									},
+									{
+										Status: types.CommandInvocationStatusPending,
+									},
+									{
+										Status: types.CommandInvocationStatusDelayed,
+									},
+								},
+							}, nil
+
+						}},
+				}
+			},
+			target:        NewTagNameTarget("ec2NameTag"),
+			testCase:      NewShellTestCase("echo lol", true),
+			expected:      false,
+			expectedError: maxRetriesExceededError{underlying: invocationsIncompleteError{}},
 		},
 		{
 			caseName: "Success should be returned if command invocation completes successfully after retry",
 			client: func(t *testing.T) *mockClient {
 				return &mockClient{
-					mockSendCommand: mockSendCommandHelper2(t, NewTagNameTarget("ec2NameTag"), NewTestCase("echo lol", true, 5)),
+					mockSendCommand: mockSendCommandHelper2(t, NewTagNameTarget("ec2NameTag"), NewShellTestCase("echo lol", true)),
 					mockListCommandInvocations: []func(ctx context.Context, params *ssm.ListCommandInvocationsInput, optFns ...func(*ssm.Options)) (output *ssm.ListCommandInvocationsOutput, e error){
 						func(ctx context.Context, params *ssm.ListCommandInvocationsInput, optFns ...func(*ssm.Options)) (output *ssm.ListCommandInvocationsOutput, e error) {
 							return &ssm.ListCommandInvocationsOutput{
@@ -325,7 +353,7 @@ func TestUseThisToTestE(t *testing.T) {
 				}
 			},
 			target:        NewTagNameTarget("ec2NameTag"),
-			testCase:      NewTestCase("echo lol", true, 5),
+			testCase:      NewShellTestCase("echo lol", true),
 			expected:      true,
 			expectedError: nil,
 		},
@@ -333,7 +361,7 @@ func TestUseThisToTestE(t *testing.T) {
 			caseName: "Should Fail if command invocation completes with Failure after retry",
 			client: func(t *testing.T) *mockClient {
 				return &mockClient{
-					mockSendCommand: mockSendCommandHelper2(t, NewTagNameTarget("ec2NameTag"), NewTestCase("echo lol", true, 5)),
+					mockSendCommand: mockSendCommandHelper2(t, NewTagNameTarget("ec2NameTag"), NewShellTestCase("echo lol", true)),
 					mockListCommandInvocations: []func(ctx context.Context, params *ssm.ListCommandInvocationsInput, optFns ...func(*ssm.Options)) (output *ssm.ListCommandInvocationsOutput, e error){
 						func(ctx context.Context, params *ssm.ListCommandInvocationsInput, optFns ...func(*ssm.Options)) (output *ssm.ListCommandInvocationsOutput, e error) {
 							return &ssm.ListCommandInvocationsOutput{
@@ -365,11 +393,10 @@ func TestUseThisToTestE(t *testing.T) {
 				}
 			},
 			target:        NewTagNameTarget("ec2NameTag"),
-			testCase:      NewTestCase("echo lol", true, 5),
+			testCase:      NewShellTestCase("echo lol", true),
 			expected:      false,
 			expectedError: fatalError{Underlying: failedForInstanceIdError{instanceId: "dummyInstanceId"}},
 		},
-
 	}
 	for _, c := range cases {
 		t.Run(c.caseName, func(t *testing.T) {

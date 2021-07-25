@@ -29,9 +29,13 @@ func TcpConnectionTestWithNameTag(t *testing.T, client commandSenderLister, tagN
 // It returns false and an error if any one of the instances cannot run the command successfully or within timeout.
 // It returns false and error for any other error.
 func TcpConnectionTestWithNameTagE(t *testing.T, client commandSenderLister, tagName, endpoint string, port string, maxRetries int, waitBetweenRetries time.Duration) (bool, error) {
-	// build target
+	// build target using tagName
 	target := NewTagNameTarget(tagName)
-	// test case
-	testCase := NewTestCase(fmt.Sprintf("bash -c '</dev/tcp/%s/%s'", endpoint, port), true, 3)
+	// build testCase with bash command to check tcp connectivity
+	testCase := NewShellTestCase(tcpConnectionTestShellCommand(3, endpoint, port), true)
 	return UseThisToTestE(t, client, testCase, target, maxRetries, waitBetweenRetries)
+}
+
+func tcpConnectionTestShellCommand(timeoutInSeconds int, endpoint string, port string) string {
+	return fmt.Sprintf("timeout %d bash -c '</dev/tcp/%s/%s'", timeoutInSeconds, endpoint, port)
 }

@@ -18,3 +18,9 @@ type commandSenderLister interface {
 	commandSender
 	commandLister
 }
+
+type commandParameterBuilder interface {
+	documentName() string
+	documentVersion() string
+	buildCommandParameters() map[string][]string
+}
