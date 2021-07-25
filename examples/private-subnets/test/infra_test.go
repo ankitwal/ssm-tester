@@ -21,7 +21,7 @@ func TestInfra(t *testing.T) {
 	})
 
 	// init and apply terraform stack ensuring clean up
-	//	defer terraform.Destroy(t, terraformOptions)
+	defer terraform.Destroy(t, terraformOptions)
 	terraform.InitAndApply(t, terraformOptions)
 
 	// Initialise AWS SSM client service.
@@ -30,9 +30,10 @@ func TestInfra(t *testing.T) {
 		t.Error(err)
 	}
 	ssmClient := ssm.NewFromConfig(config)
-	// the number of times the tester should retry polling for the result of the test command
+
+	// create retry configuration for
+	// the tester the number of times the tester should retry polling for the result of the test command
 	maxRetriesToPollResult := 5
-	// the number of time to sleep between retries
 	waitBetweenRetries := 3 * time.Second
 
 	t.Run("TestAppInstanceConnectivityToDatabase", func(t *testing.T) {
