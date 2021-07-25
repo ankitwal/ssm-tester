@@ -2,6 +2,7 @@ package test
 
 import (
 	"context"
+	"fmt"
 	"github.com/ankitwal/ssm-tester/tester"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
@@ -29,17 +30,17 @@ func TestInfra(t *testing.T) {
 		t.Error(err)
 	}
 	ssmClient := ssm.NewFromConfig(config)
+	// the number of times the tester should retry polling for the result of the test command
+	maxRetriesToPollResult := 5
+	// the number of time to sleep between retries
+	waitBetweenRetries := 3 * time.Second
+
 	t.Run("TestAppInstanceConnectivityToDatabase", func(t *testing.T) {
 		t.Parallel()
 		// get the required resource values using terratest's terraform module
 		dbEndpoint := terraform.Output(t, terraformOptions, "database_endpoint")
 		dbPort := terraform.Output(t, terraformOptions, "database_port")
 		tag := terraform.Output(t, terraformOptions, "instance_name_tag")
-		// the number of times you want the tester to retry polling for the result of the test command
-		maxRetriesToPollResult := 5
-		// the number of time to sleep between retries
-		waitBetweenRetries := 3 * time.Second
-		// run the test and check for errors. If no errors are returned the command is success ful for all instances
 		tester.TcpConnectionTestWithNameTag(t, ssmClient, tag, dbEndpoint, dbPort, maxRetriesToPollResult, waitBetweenRetries)
 	})
 	t.Run("TestAppInstanceConnectivityToLoggingService", func(t *testing.T) {
@@ -48,11 +49,6 @@ func TestInfra(t *testing.T) {
 		loggingEndpoint := terraform.Output(t, terraformOptions, "logging_endpoint")
 		loggingPort := "443"
 		tag := terraform.Output(t, terraformOptions, "instance_name_tag")
-		// the number of times you want the tester to retry polling for the result of the test command
-		maxRetriesToPollResult := 5
-		// the number of time to sleep between retries
-		waitBetweenRetries := 3 * time.Second
-		// run the test and check for errors. If no errors are returned the command is success ful for all instances
 		tester.TcpConnectionTestWithNameTag(t, ssmClient, tag, loggingEndpoint, loggingPort, maxRetriesToPollResult, waitBetweenRetries)
 	})
 	t.Run("TestAppInstanceConnectivityToMonitoringService", func(t *testing.T) {
@@ -61,24 +57,20 @@ func TestInfra(t *testing.T) {
 		monitoringEndpoint := terraform.Output(t, terraformOptions, "monitoring_endpoint")
 		monitoringPort := "443"
 		tag := terraform.Output(t, terraformOptions, "instance_name_tag")
-		// the number of times you want the tester to retry polling for the result of the test command
-		maxRetriesToPollResult := 5
-		// the number of time to sleep between retries
-		waitBetweenRetries := 3 * time.Second
-		// run the test and check for errors. If no errors are returned the command is success ful for all instances
 		tester.TcpConnectionTestWithNameTag(t, ssmClient, tag, monitoringEndpoint, monitoringPort, maxRetriesToPollResult, waitBetweenRetries)
 	})
-	t.Run("TestEchoCommandViaCustomeTestCase", func(t *testing.T) {
+	t.Run("TestAppInstanceShouldNotHaveConnectivityToPublicInternet", func(t *testing.T) {
 		t.Parallel()
-		// get the required resource values using terratest's terraform module
-		testCase := tester.NewTestCase("xxx", true, 2)
-		tag := terraform.Output(t, terraformOptions, "instance_name_tag")
-		tagNameTarget := tester.NewTagNameTarget(tag)
-		// the number of times you want the tester to retry polling for the result of the test command
-		maxRetriesToPollResult := 5
-		// the number of time to sleep between retries
-		waitBetweenRetries := 3 * time.Second
-		// run the test and check for errors. If no errors are returned the command is success ful for all instances
+		// build a tcp connectivity test case with public endpoint and port
+		testCase := tester.NewShellTestCase(fmt.Sprintf("timeout 2 bash -c '</dev/tcp/%s/%s'", "www.example.com", "443"), false)
+		target := tester.NewTagNameTarget(terraform.Output(t, terraformOptions, "instance_name_tag"))
+		tester.UseThisToTest(t, ssmClient, testCase, target, maxRetriesToPollResult, waitBetweenRetries)
+	})
+
+	t.Run("TestEchoCommandViaCustomTestCase", func(t *testing.T) {
+		t.Parallel()
+		testCase := tester.NewShellTestCase("aws", false)
+		tagNameTarget := tester.NewTagNameTarget(terraform.Output(t, terraformOptions, "instance_name_tag"))
 		tester.UseThisToTest(t, ssmClient, testCase, tagNameTarget, maxRetriesToPollResult, waitBetweenRetries)
 	})
 

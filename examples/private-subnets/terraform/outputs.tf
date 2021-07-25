@@ -17,8 +17,8 @@ output "database_endpoint" {
   value = module.db.db_instance_address
 }
 output "monitoring_endpoint" {
-  value = format("monitoring.%s.amazonaws.com",local.region)
+  value = format("monitoring.%s.amazonaws.com", local.region)
 }
 output "logging_endpoint" {
-  value = format("logs.%s.amazonaws.com",local.region)
+  value = format("logs.%s.amazonaws.com", local.region)
 }
