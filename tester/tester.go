@@ -13,6 +13,7 @@ import (
 )
 
 // Todo rename
+// Todo add documentaion
 func UseThisToTest(t *testing.T, client commandSenderLister, testCase ShellTestCase, target targetParamBuilder,
 	maxRetries int, waitBetweenRetries time.Duration) {
 	_, err := UseThisToTestE(t, client, testCase, target, maxRetries, waitBetweenRetries)
@@ -21,15 +22,17 @@ func UseThisToTest(t *testing.T, client commandSenderLister, testCase ShellTestC
 	}
 }
 
+// Todo rename
+// Todo add documentaion
 func UseThisToTestE(t *testing.T, client commandSenderLister, testCase ShellTestCase, target targetParamBuilder,
 	maxRetries int, waitBetweenRetries time.Duration) (bool, error) {
-	// Command Sender
+	// send test command
 	sendCommandInput := newSendCommandInput(testCase, target)
 	sendCommandOutput, err := client.SendCommand(context.Background(), sendCommandInput)
 	if err != nil {
 		return false, err
 	}
-	// Command Result Poller
+	// poll for test command execution results
 	retryAction := getListCommandAction(t, client, *sendCommandOutput.Command.CommandId)
 	result, err := retry(t, "Poll For Invocation Results", maxRetries, waitBetweenRetries, retryAction)
 	if err != nil {
@@ -49,12 +52,7 @@ func newSendCommandInput(testCase ShellTestCase, target targetParamBuilder) *ssm
 
 func buildListCommandInput(commandId string) *ssm.ListCommandInvocationsInput {
 	return &ssm.ListCommandInvocationsInput{
-		CommandId:  &commandId,
-		Details:    false,
-		Filters:    nil,
-		InstanceId: nil,
-		MaxResults: 0,
-		NextToken:  nil,
+		CommandId: &commandId,
 	}
 }
 
