@@ -9,6 +9,7 @@ import (
 
 // retry is based on terratest RetryWithInterface from: https://github.com/gruntwork-io/terratest/blob/master/modules/retry/retry.go.
 // The original copyright and licence are as here: https://github.com/gruntwork-io/terratest/blob/master/LICENSE.
+// The a copy of the original NOTICE and LICENCE are available at the end of this file
 // retry is modified to that the MaxRetriesExceededError wraps and propagate the last underlying.
 func retry(t *testing.T, actionDescription string, maxRetries int, waitBetweenRetries time.Duration, action func() (interface{}, error)) (interface{}, error) {
 	var output interface{}

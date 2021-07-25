@@ -11,7 +11,7 @@ import (
 // It fails the test if any one of the instances cannot run the command successfully or within timeout, or any other error.
 // It passes the test if all found instances for tag Name run the command successfully in the given timeouts.
 //
-// tagName should be the string value of the tag:Name of the target EC2 instances.
+// tagName should be the string tagNameValue of the tag:Name of the target EC2 instances.
 // endpoint, and port should be the network endpoint to validate tcp connectivity to.
 //
 // maxRetries specifies the number of times the test should poll AWS API for results of the command sent to the target EC2 VMs.

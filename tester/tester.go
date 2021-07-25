@@ -4,7 +4,6 @@ package tester
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/aws/aws-sdk-go-v2/service/ssm/types"
@@ -23,8 +22,11 @@ func UseThisToTest(t *testing.T, client commandSenderLister, testCase commandPar
 }
 
 // Todo rename
-// Todo add documentaion
-func UseThisToTestE(t *testing.T, client commandSenderLister, testCase ShellTestCase, target targetParamBuilder,
+// Todo UseThisToTestE accepts a testCase, target and some retry related configuration and uses AWS SSM to run
+// It returns false and an error if no instances are found to match the Name tag.
+// It returns false and an error if any one of the instances cannot run the command successfully or within timeout.
+// It returns false and error for any other error.
+func UseThisToTestE(t *testing.T, client commandSenderLister, testCase commandParameterBuilder, target targetParamBuilder,
 	maxRetries int, waitBetweenRetries time.Duration) (bool, error) {
 	// send test command
 	sendCommandInput := newSendCommandInput(testCase, target)
