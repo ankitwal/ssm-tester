@@ -29,7 +29,7 @@ func (m *mockClient) ListCommandInvocations(ctx context.Context, params *ssm.Lis
 	return m.mockListCommandInvocations[m.listCommandInvocationRetryIndex-1](ctx, params, optFns...)
 }
 
-func mockSendCommandHelper(t *testing.T, target tagNameTarget, testCase ShellTestCase) func(ctx context.Context, params *ssm.SendCommandInput, optFns ...func(*ssm.Options)) (output *ssm.SendCommandOutput, e error) {
+func mockSendCommandHelper(t *testing.T, target TagNameTarget, testCase ShellTestCase) func(ctx context.Context, params *ssm.SendCommandInput, optFns ...func(*ssm.Options)) (output *ssm.SendCommandOutput, e error) {
 	return func(ctx context.Context, params *ssm.SendCommandInput, optFns ...func(*ssm.Options)) (output *ssm.SendCommandOutput, e error) {
 		// helper to test if tester is building the correct sendCommandInput for a given target and testCase
 		t.Helper()
@@ -221,7 +221,7 @@ func TestUseThisToTestE(t *testing.T) {
 			// Make the unit tests run faster with no wait between retries
 			defaultMaxRetries, defaultWaitBetweenRetries := 5, 0*time.Second
 
-			actual, actualErr := UseThisToTestE(t, c.client(t), c.testCase, c.target, defaultMaxRetries, defaultWaitBetweenRetries)
+			actual, actualErr := RunTestCaseForTargetE(t, c.client(t), c.testCase, c.target, defaultMaxRetries, defaultWaitBetweenRetries)
 			if (c.expectedError != nil && actualErr == nil) || (c.expectedError == nil && actualErr != nil) {
 				t.Errorf("Expected error %v, but got %v", c.expectedError, actualErr)
 			}

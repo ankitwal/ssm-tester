@@ -11,22 +11,21 @@ import (
 	"time"
 )
 
-// Todo rename
-// Todo add documentaion
-func UseThisToTest(t *testing.T, client commandSenderLister, testCase commandParameterBuilder, target targetParamBuilder,
+// Todo Documentation
+func RunTestCaseForTarget(t *testing.T, client commandSenderLister, testCase commandParameterBuilder, target targetParamBuilder,
 	maxRetries int, waitBetweenRetries time.Duration) {
-	_, err := UseThisToTestE(t, client, testCase, target, maxRetries, waitBetweenRetries)
+	_, err := RunTestCaseForTargetE(t, client, testCase, target, maxRetries, waitBetweenRetries)
 	if err != nil {
 		t.Error(err)
 	}
 }
 
-// Todo rename
-// Todo UseThisToTestE accepts a testCase, target and some retry related configuration and uses AWS SSM to run
+// Todo Documentation
+// RunTestCaseForTargetE accepts a testCase, target and some retry related configuration and uses AWS SSM to run
 // It returns false and an error if no instances are found to match the Name tag.
 // It returns false and an error if any one of the instances cannot run the command successfully or within timeout.
 // It returns false and error for any other error.
-func UseThisToTestE(t *testing.T, client commandSenderLister, testCase commandParameterBuilder, target targetParamBuilder,
+func RunTestCaseForTargetE(t *testing.T, client commandSenderLister, testCase commandParameterBuilder, target targetParamBuilder,
 	maxRetries int, waitBetweenRetries time.Duration) (bool, error) {
 	// send test command
 	sendCommandInput := newSendCommandInput(testCase, target)

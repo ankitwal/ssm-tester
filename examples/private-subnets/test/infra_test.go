@@ -64,14 +64,14 @@ func TestInfra(t *testing.T) {
 		// build a tcp connectivity test case with public endpoint and port
 		testCase := tester.NewShellTestCase(fmt.Sprintf("timeout 2 bash -c '</dev/tcp/%s/%s'", "www.example.com", "443"), false)
 		target := tester.NewTagNameTarget(terraform.Output(t, terraformOptions, "instance_name_tag"))
-		tester.UseThisToTest(t, ssmClient, testCase, target, maxRetriesToPollResult, waitBetweenRetries)
+		tester.RunTestCaseForTarget(t, ssmClient, testCase, target, maxRetriesToPollResult, waitBetweenRetries)
 	})
 
 	t.Run("TestEchoCommandViaCustomTestCase", func(t *testing.T) {
 		t.Parallel()
 		testCase := tester.NewShellTestCase("aws", false)
 		tagNameTarget := tester.NewTagNameTarget(terraform.Output(t, terraformOptions, "instance_name_tag"))
-		tester.UseThisToTest(t, ssmClient, testCase, tagNameTarget, maxRetriesToPollResult, waitBetweenRetries)
+		tester.RunTestCaseForTarget(t, ssmClient, testCase, tagNameTarget, maxRetriesToPollResult, waitBetweenRetries)
 	})
 
 }

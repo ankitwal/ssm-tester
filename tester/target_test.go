@@ -8,7 +8,7 @@ import (
 
 func TestTagNameTarget(t *testing.T) {
 	var cases = []struct {
-		target   tagNameTarget
+		target   TagNameTarget
 		expected []types.Target
 	}{
 		{

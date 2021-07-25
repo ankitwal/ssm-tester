@@ -33,7 +33,7 @@ func TcpConnectionTestWithNameTagE(t *testing.T, client commandSenderLister, tag
 	target := NewTagNameTarget(tagName)
 	// build testCase with bash command to check tcp connectivity
 	testCase := NewShellTestCase(tcpConnectionTestShellCommand(3, endpoint, port), true)
-	return UseThisToTestE(t, client, testCase, target, maxRetries, waitBetweenRetries)
+	return RunTestCaseForTargetE(t, client, testCase, target, maxRetries, waitBetweenRetries)
 }
 
 func tcpConnectionTestShellCommand(timeoutInSeconds int, endpoint string, port string) string {
