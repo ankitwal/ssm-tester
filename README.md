@@ -10,7 +10,20 @@ tests that validate *behaviour*.
 
 ## Why 
 
-### Testing Behaviour vs Configuration 
+### Validating infrastructure without ssh
+
+* Modern cloud architecture is moving away from ssh, and without access to instance it is hard to validate certain behaviour.
+* Manually running commands to validate infrastructure correctness is slow and unreliable.
+* This means some behaviour may only get tested when we run an application on the provisioned infrastructure app on it, eg. connectivity to database, connectivity to required internet endpoint.
+This means really slow feedback, which in turn means low quality. The application delivery team is a consumer/customer of the the infrastructure delivery team. 
+A infrastructure delivery team should not have to rely on it's customers to validate to its code.
+* Additionally some behaviour is hard to validate, and wont get immediately feedback with even application running correctly on the provisioned infra. Example:
+    * Broken connectivity to logging endpoints/service may only get detected if a team member notices missing logs, often these are not even being looked at in lower environments. Or worse it may only be
+    detected when instance in production start falling over since their disks have gone to full from failing to flush logs to a remote logging service.
+
+ssm-tester allows infrastructure delivery teams to write tests than can execute custom commands on ec2 instances and hence validate for otherwise hard to test behaviour.
+
+### Testing Behaviour over Configuration 
 When we write infrastructure as code - we want to not only test against the configuration we create but also test the our infrastructure for *behaviour*!
 Specially when we write infrastructure code in declarative tooling like terraform, tests that validate configuration may have limited value.  
 For example, validating for **configuration**:  
@@ -27,7 +40,7 @@ Instead it would be better if we could write tests to validate **behaviour**:
 * can my provisioned instance pull a required secret from secrets manager
     * this would validate that required networking configuration + IAM Instance Profile + Role configuration cumulatively allows for this behaviour 
 
-ssm-tester enables us to write automated tests that validate behaviour so we infrastructure engineering teams do not have to wait for application teams to report
+ssm-tester enables users to write automated tests that validate behaviour so infrastructure engineering teams do not have to wait for application teams to report
 broken infrastructure or worse wait for incidents in production. 
 
 ## Quick Start 
@@ -62,9 +75,9 @@ consider layering on AWS SSM required resources
 4. Write some tests  
     ```go
        t.Run("TestAppInstanceCanConnectToImportantEndpoint", func(t *testing.T) {   
-           // 4.1 create a new test with a custom test command - this example uses curl
-           // please ensure your target instances have curl installed
-           testCase := tester.NewShellTestCase("curl https://www.importantendpoint.com --connect-timeout 2", true)
+           // 4.1 create a new test with a custom test command
+           // this example uses curl, it relies on your target instances having curl installed
+           testCase := tester.NewShellTestCase("curl https://www.importantendpoint.com --max-time=2", true)
    
            // 4.2 specify the ec2 instance to target for the test
            target := tester.NewTagNameTarget(terraform.Output(t, terraformOptions, "app_instance_name_tag"))
@@ -131,7 +144,7 @@ Write tests to app instances have the required IAM, and networking configuration
     t.Run("TestAppInstanceShouldNOTHaveConnectivityToPublicInternet", func(t *testing.T) {
           // build a testCase command that validates that the instance has networking and IAM access to a secret that will be required by the application 
           // this relies on aws cli being installed on the instance(AMI) being targeted.  
-    	testCase := tester.NewShellTestCase(`aws secretsmanager list-secret-version-ids --secret-id "secret-required-by-app" &> /dev/null`), true)
+    	testCase := tester.NewShellTestCase(`aws secretsmanager list-secret-version-ids --secret-id "secret-required-by-app"`), true)
    
           // specify the ec2 instance to target for the test
           target := tester.NewTagNameTarget(terraform.Output(t, terraformOptions, "instance_name_tag"))
