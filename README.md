@@ -17,16 +17,16 @@ tests that validate *behaviour*.
 * Modern cloud architecture is moving away from ssh, and without access to instance it is hard to validate certain behaviour.
 * Manually running commands to validate infrastructure correctness is slow and unreliable.
 * This means some behaviour may only get tested when we run an application on the provisioned infrastructure app on it, eg. connectivity to database, connectivity to required internet endpoint.
-This slows the feedback loop in turn means lower quality. The application delivery team is a consumer/customer of the the infrastructure delivery team. 
-An infrastructure delivery team should not have to rely on it's customers to validate to its code.
-* Additionally some behaviour is hard to validate, and wont get immediately feedback with even application running correctly on the provisioned infra. Example:
-    * Broken connectivity to logging endpoints/service may only get detected if a team member notices missing logs, often these are not even being looked at in lower environments. Or worse it may only be
+This slows the feedback loop in turn means lower quality. The application delivery team is a consumer/customer of the infrastructure delivery team. 
+An infrastructure delivery team should not have to rely on its customers to validate its code.
+* Additionally some behaviour is hard to validate, and won't get immediate feedback even with an application running correctly on the provisioned infra. Example:
+    * Broken connectivity to logging endpoints/service may only be detected if a team member notices missing logs, often these are not even being looked at in lower environments. Or worse it may only be
     detected when instance in production start falling over since their disks have gone to full from failing to flush logs to a remote logging service.
 
-ssm-tester allows infrastructure delivery teams to write tests than can execute custom commands on ec2 instances and hence validate for otherwise hard to test behaviour.
+ssm-tester allows infrastructure delivery teams to write tests that can execute custom commands on ec2 instances and hence validate for otherwise hard to test behaviour.
 
 ### Testing Behaviour over Configuration 
-When we write infrastructure as code - we want to not only test against the configuration we create but also test the our infrastructure for *behaviour*!
+When we write infrastructure as code - we want to not only test against the configuration we create, but also test the infrastructure for *behaviour*!
 Specially when we write infrastructure code in declarative tooling like terraform, tests that validate configuration may have limited value.  
 For example, validating for **configuration**:  
 * does my security group have outgoing allowed to the RDS Security group
@@ -35,15 +35,15 @@ For example, validating for **configuration**:
 * does my application subnet have a route table attached with routes to the database subnet 
 
 These tests may essentially be a repeat of the configuration specified in our Infrastructure declarative code
-and does not validate the behaviour we want to guarantee in our infrastructure.  
+and do not validate the behaviour we want to guarantee in our infrastructure.  
 Instead it would be better if we could write tests to validate **behaviour**: 
-* does my provisioned infrastructure allow my application EC2 instances to connect via TCP to my RDS endpoint. 
+* does my provisioned infrastructure allow my application EC2 instances to connect via TCP to my RDS endpoint 
     * this would ideally validate that the configuration for security groups, subnets, NACLs, route tables cumulatively allows this behaviour.  
 * can my provisioned instance pull a required secret from secrets manager
     * this would validate that required networking configuration + IAM Instance Profile + Role configuration cumulatively allows for this behaviour 
 
-ssm-tester enables users to write automated tests that validate behaviour so infrastructure engineering teams do not have to wait for application teams to report
-broken infrastructure or worse wait for incidents in production. 
+ssm-tester enables users to write automated tests that validate behaviour, so infrastructure engineering teams do not have to wait for application teams to report
+broken infrastructure, or worse, wait for incidents in production. 
 
 ## Quick Start 
 
@@ -54,7 +54,7 @@ This requires your EC2 instances to all ssm-agent installed( installed by defaul
 You may see this [example](examples/simple-example/terraform/main.tf) of a minimum AWS Systems Manager integrated infra, and 
 [this AWS Documentation](https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-setting-up.html) for a more comprehensive guide.  
 If you already use AWS Systems Manager in your AWS Infrastructure then you should be able to use this out of box. Alternatively you may
-consider layering on AWS SSM required resources 
+consider layering on AWS SSM required resources in the test environments.
 
 ### Using ssm-tester/tester
 
