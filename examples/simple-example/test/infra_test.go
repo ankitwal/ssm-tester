@@ -16,7 +16,7 @@ func TestInfra(t *testing.T) {
 	})
 
 	// init and apply terraform stack ensuring clean up
-//	t.Cleanup(func() { terraform.Destroy(t, terraformOptions) })
+	t.Cleanup(func() { terraform.Destroy(t, terraformOptions) })
 	terraform.InitAndApply(t, terraformOptions)
 
 	// Initialise AWS SSM client service.
