@@ -9,7 +9,9 @@ Infrastructure testing helper for AWS Resources that uses AWS SSM to remotely ex
 tests that validate *behaviour*.
 
 ## Why 
-When we write infrastructure as code - we want to not only test against the configuration we create but also test the our infrastructure for *behvaiour*!
+
+### Testing Behaviour vs Configuration 
+When we write infrastructure as code - we want to not only test against the configuration we create but also test the our infrastructure for *behaviour*!
 Specially when we write infrastructure code in declarative tooling like terraform, tests that validate configuration may have limited value.
 For example, validating for *configuration* - 
 * does my security group have outgoing allowed to the RDS Security group
@@ -17,12 +19,15 @@ For example, validating for *configuration* -
 * does my application subnet network ACL have rules allowing ephemeral ports open for return traffic from RDS subnets
 * does my application subnet have a route table attached with routes to the database subnet 
 
+These tests may essentially be a repeat of the configuration specified in our Infrastructure declarative code
+and does not validate the behaviour we want to guarantee in our infrastructure. 
+
 
 Instead it would be better if we could write tests to validate *behaviour*.
 * does my provisioned infrastructure allow my application EC2 instances to connect via TCP to my RDS endpoint. 
-** this would ideally validate that the configuration for security groups, subnets, NACLs, route tables cumulatively allows this behaviour.  
+    * this would ideally validate that the configuration for security groups, subnets, NACLs, route tables cumulatively allows this behaviour.  
 * can my provisioned instance pull a required secret from secrets manager
-** this would validate that required networking configuration + IAM Instance Profile + Role configuration cumulatively allows for this behaviour 
+    * this would validate that required networking configuration + IAM Instance Profile + Role configuration cumulatively allows for this behaviour 
 
 ssm-tester enables us to write automated tests that validate behaviour so we infrastructure engineering teams do not have to wait for application teams to report
 broken infrastructure or worse wait for incidents in production. 
