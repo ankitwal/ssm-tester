@@ -36,12 +36,13 @@ broken infrastructure or worse wait for incidents in production.
 
 ssm-tester requires the the EC2 instances to be integrated with [AWS Systems Manager](https://aws.amazon.com/systems-manager/). 
 This requires your EC2 instances to all ssm-agent installed( installed by default on Amazon Linux 2), and certain AWS SSM related resources provisioned. 
-You may see this [example](./examples/private-subnets/terraform/main.tf) of a minimum AWS Systems Manager integrated infra, and 
+You may see this [example](examples/simple-example/terraform/main.tf) of a minimum AWS Systems Manager integrated infra, and 
 [this AWS Documentation](https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-setting-up.html) for a more comprehensive guide.  
 If you already use AWS Systems Manager in your AWS Infrastructure then you should be able to use this out of box. Alternatively you may
 consider layering on AWS SSM required resources 
 
-### Using tester
+### Using ssm-tester/tester
+
 1. Import ssm-tester/tester
     ```go
     	import "github.com/ankitwal/ssm-tester/tester"
@@ -58,10 +59,7 @@ consider layering on AWS SSM required resources
     	maxRetriesToPollResult := 5
     	waitBetweenRetries := 3 * time.Second
     ```
-4. Write some tests 
- 
-    A. Write your custom tests 
-    
+4. Write some tests  
     ```go
        t.Run("TestAppInstanceCanConnectToImportantEndpoint", func(t *testing.T) {   
            // 4.1 create a new test with a custom test command - this example uses curl
@@ -75,44 +73,70 @@ consider layering on AWS SSM required resources
            tester.RunTestCaseForTarget(t, ssmClient, testCase, target, maxRetriesToPollResult, waitBetweenRetries)   
        })
     ```
+### More examples 
+
+Write some tests with built in [TcpConnectionTestWithTagName](https://pkg.go.dev/github.com/ankitwal/ssm-tester/tester#TcpConnectionTestWithNameTag) helper 
+ 
+```go
+    t.Run("TestAppInstanceConnectivityToDatabase", func(t *testing.T) {
+        dbEndpoint := "mydb.privatedns" 
+        dbPort := "3306" 
+        tag := "app_instance_name_tag" 
    
-    B. Write some tests with built in [TcpConnectionTestWithTagName](https://pkg.go.dev/github.com/ankitwal/ssm-tester/tester#TcpConnectionTestWithNameTag) helper 
-    ```go
-       t.Run("TestAppInstanceConnectivityToDatabase", func(t *testing.T) {
-           dbEndpoint := "mydb.privatedns" 
-           dbPort := "3306" 
-           tag := "app_instance_name_tag" 
+        // run the test
+        tester.TcpConnectionTestWithTagName(t, ssmClient, tag, dbEndpoint, dbPort, maxRetriesToPollResult, waitBetweenRetries)
+    })
+```
    
-           // run the test
-           tester.TcpConnectionTestWithTagName(t, ssmClient, tag, dbEndpoint, dbPort, maxRetriesToPollResult, waitBetweenRetries)
-       })
-    ```
+Write some tests with using [terratest](https://terratest.gruntwork.io), please see [examples](examples/simple-example/) for working examples 
+
+```go
+	// this example uses terratest to initialise the terraform stack and get output value
+	terraformOptions := terraform.WithDefaultRetryableErrors(t, &terraform.Options{
+		TerraformDir: "../terraform",
+	})
+
+	// init and apply terraform stack ensuring clean up
+	t.Cleanup(func() { terraform.Destroy(t, terraformOptions) })
+	terraform.InitAndApply(t, terraformOptions)
+
+    t.Run("TestAppInstanceConnectivityToDatabase", func(t *testing.T) {
+        // get the required resource values using terratest's terraform module
+        dbEndpoint := terraform.Output(t, terraformOptions, "database_endpoint")
+        dbPort := terraform.Output(t, terraformOptions, "database_port")
+        tag := terraform.Output(t, terraformOptions, "instance_name_tag")
    
-   C. Write some tests with using terratest. Please see [examples](examples/private-subnets/) for working examples 
-   ```go
-       t.Run("TestAppInstanceConnectivityToDatabase", func(t *testing.T) {
-           // get the required resource values using terratest's terraform module
-           dbEndpoint := terraform.Output(t, terraformOptions, "database_endpoint")
-           dbPort := terraform.Output(t, terraformOptions, "database_port")
-           tag := terraform.Output(t, terraformOptions, "instance_name_tag")
+        // run the test 
+        tester.TcpConnectionTestWithTagName(t, ssmClient, tag, dbEndpoint, dbPort, maxRetriesToPollResult, waitBetweenRetries)    
+    })
+``` 
+
+Write negative tests
+```go
+    t.Run("TestAppInstanceShouldNOTHaveConnectivityToPublicInternet", func(t *testing.T) {
+          // build a tcp connectivity test case with public endpoint and port, 
+          // with condition false, i.e the tests passes if the command fails on all target instances
+    	testCase := tester.NewShellTestCase(fmt.Sprintf("timeout 2 bash -c '</dev/tcp/%s/%s'", "www.example.com", "443"), false)
    
-           // run the test 
-           tester.TcpConnectionTestWithTagName(t, ssmClient, tag, dbEndpoint, dbPort, maxRetriesToPollResult, waitBetweenRetries)    
-       })
-    ``` 
+          // specify the ec2 instance to target for the test
+          target := tester.NewTagNameTarget(terraform.Output(t, terraformOptions, "instance_name_tag"))
    
-   D. Write negative tests
-    ```go
-	    t.Run("TestAppInstanceShouldNOTHaveConnectivityToPublicInternet", func(t *testing.T) {
-           // build a tcp connectivity test case with public endpoint and port, 
-           // with condition false, i.e the tests passes if the command fails on all target instances
-	    	testCase := tester.NewShellTestCase(fmt.Sprintf("timeout 2 bash -c '</dev/tcp/%s/%s'", "www.example.com", "443"), false)
+          // run the test
+          tester.RunTestCaseForTarget(t, ssmClient, testCase, target, maxRetriesToPollResult, waitBetweenRetries)
+    })
+```
    
-           // specify the ec2 instance to target for the test
-           target := tester.NewTagNameTarget(terraform.Output(t, terraformOptions, "instance_name_tag"))
+Write tests to app instances have the required IAM, and networking configuration to be able to pull secrets that might be required by app
+```go
+    t.Run("TestAppInstanceShouldNOTHaveConnectivityToPublicInternet", func(t *testing.T) {
+          // build a testCase command that validates that the instance has networking and IAM access to a secret that will be required by the application 
+          // this relies on aws cli being installed on the instance(AMI) being targeted.  
+    	testCase := tester.NewShellTestCase(`aws secretsmanager list-secret-version-ids --secret-id "secret-required-by-app" &> /dev/null`), true)
    
-           // run the test
-           tester.RunTestCaseForTarget(t, ssmClient, testCase, target, maxRetriesToPollResult, waitBetweenRetries)
-	    })
-    ```
-   E. Write tests to validate IAM + SecurityGroup Config + NACL + Route Table behvaiour 
+          // specify the ec2 instance to target for the test
+          target := tester.NewTagNameTarget(terraform.Output(t, terraformOptions, "instance_name_tag"))
+   
+          // run the test
+          tester.RunTestCaseForTarget(t, ssmClient, testCase, target, maxRetriesToPollResult, waitBetweenRetries)
+    })
+```
