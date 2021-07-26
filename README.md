@@ -12,16 +12,15 @@ tests that validate *behaviour*.
 
 ## Why 
 
-### Validating infrastructure without ssh
+### Validating infrastructure
 
-* Modern cloud architecture is moving away from ssh, and without access to instance it is hard to validate certain behaviour.
 * Manually running commands to validate infrastructure correctness is slow and unreliable.
-* This means some behaviour may only get tested when we run an application on the provisioned infrastructure app on it, eg. connectivity to database, connectivity to required internet endpoint.
-This slows the feedback loop in turn means lower quality. The application delivery team is a consumer/customer of the infrastructure delivery team. 
-An infrastructure delivery team should not have to rely on its customers to validate its code.
-* Additionally some behaviour is hard to validate, and won't get immediate feedback even with an application running correctly on the provisioned infra. Example:
-    * Broken connectivity to logging endpoints/service may only be detected if a team member notices missing logs, often these are not even being looked at in lower environments. Or worse it may only be
-    detected when instance in production start falling over since their disks have gone to full from failing to flush logs to a remote logging service.
+* At times access like ssh may not even be possbile to all instances in a cloud environment, making validation even harder.
+* This means some behaviour may only get tested when we run an application on the provisioned infrastructure, eg. connectivity to database, connectivity to required internet endpoint etc.
+This slows the feedback loop and in turn means lower quality. The application delivery team is a consumer/customer of the infrastructure delivery team. 
+Hence an infrastructure delivery team should not have to rely on its customers to validate its code.
+* Additionally some behaviour is hard to validate, and won't get immediate feedback even with an application running functionally correctly on the provisioned infra. Example:
+    * Broken connectivity to logging endpoints/service may only be detected if a team member notices missing logs, often these are not even being looked at in lower environments. Or worse it may only be detected when instance in production start falling over since their disks have gone to full from failing to flush logs to a remote logging service.
 
 ssm-tester allows infrastructure delivery teams to write tests that can execute custom commands on ec2 instances and hence validate for otherwise hard to test behaviour.
 
