@@ -218,7 +218,7 @@ func TestRunTestCaseForTargetE(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.caseName, func(t *testing.T) {
 			// Make the unit tests run faster with no wait between retries
-			retryConfig := NewRetryConfig(5,1)
+			retryConfig := NewRetryConfig(5, 1)
 
 			actual, actualErr := RunTestCaseForTargetE(t, c.client(t), c.testCase, c.target, retryConfig)
 			if (c.expectedError != nil && actualErr == nil) || (c.expectedError == nil && actualErr != nil) {
