@@ -8,7 +8,6 @@
 Infrastructure testing helper for AWS Resources that uses AWS SSM to remotely execute commands on EC2 machines, to enable infrastructure engineering teams to write 
 tests that validate *behaviour*.
 
-## Demo
 ![automate infrastructure behaviour testing](https://i.ibb.co/cgbthDN/terminal-screenshot.png)
 
 ## Why 
