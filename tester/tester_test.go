@@ -7,7 +7,6 @@ import (
 	"github.com/aws/smithy-go/middleware"
 	"reflect"
 	"testing"
-	"time"
 )
 
 // Mock that satisfies the commandSenderLister interface
@@ -219,9 +218,9 @@ func TestRunTestCaseForTargetE(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.caseName, func(t *testing.T) {
 			// Make the unit tests run faster with no wait between retries
-			defaultMaxRetries, defaultWaitBetweenRetries := 5, 0*time.Second
+			retryConfig := NewRetryConfig(5,1)
 
-			actual, actualErr := RunTestCaseForTargetE(t, c.client(t), c.testCase, c.target, defaultMaxRetries, defaultWaitBetweenRetries)
+			actual, actualErr := RunTestCaseForTargetE(t, c.client(t), c.testCase, c.target, retryConfig)
 			if (c.expectedError != nil && actualErr == nil) || (c.expectedError == nil && actualErr != nil) {
 				t.Errorf("Expected error %v, but got %v", c.expectedError, actualErr)
 			}

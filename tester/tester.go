@@ -23,8 +23,8 @@ import (
 // waitBetweenRetires specifies the duration in time.Seconds to wait between each retry.
 // These values may need to be adjusted for type of command and the total number of ec2 instances that are expected to run the test command.
 func RunTestCaseForTarget(t *testing.T, client commandSenderLister, testCase commandParameterBuilder, target targetParamBuilder,
-	maxRetries int, waitBetweenRetries time.Duration) {
-	_, err := RunTestCaseForTargetE(t, client, testCase, target, maxRetries, waitBetweenRetries)
+	retryConfig retryConfig) {
+	_, err := RunTestCaseForTargetE(t, client, testCase, target, retryConfig)
 	if err != nil {
 		t.Error(err)
 	}
@@ -35,7 +35,7 @@ func RunTestCaseForTarget(t *testing.T, client commandSenderLister, testCase com
 // It returns false and an error if any one of the instances cannot run the command successfully or within timeout.
 // It returns false and error for any other error.
 func RunTestCaseForTargetE(t *testing.T, client commandSenderLister, testCase commandParameterBuilder, target targetParamBuilder,
-	maxRetries int, waitBetweenRetries time.Duration) (bool, error) {
+	retryConfig retryConfig) (bool, error) {
 	// send test command
 	sendCommandInput := newSendCommandInput(testCase, target)
 	sendCommandOutput, err := client.SendCommand(context.Background(), sendCommandInput)
@@ -44,7 +44,7 @@ func RunTestCaseForTargetE(t *testing.T, client commandSenderLister, testCase co
 	}
 	// poll for test command execution results
 	retryAction := getListCommandAction(t, client, *sendCommandOutput.Command.CommandId)
-	result, err := retry(t, "Poll For Invocation Results", maxRetries, waitBetweenRetries, retryAction)
+	result, err := retry(t, "Poll For Invocation Results", retryConfig.maxRetries, retryConfig.waitBetweenRetries, retryAction)
 	if err != nil {
 		return false, err
 	}
@@ -130,4 +130,29 @@ type failedForInstanceIdError struct {
 
 func (err failedForInstanceIdError) Error() string {
 	return fmt.Sprintf("command invocations failed for instanceId %s", err.instanceId)
+}
+
+type retryConfig struct {
+	maxRetries         int
+	waitBetweenRetries time.Duration
+}
+
+// NewRetryConfig returns a instance of RetryConfig where
+// maxRetries is the total number of times the tester will poll ssm api to check for results of the test commands.
+// waitBetweenRetries is the amount of time to wait between each retry.
+//
+// These values may need to be adjusted if the test command is expected to be long running, or the total number
+// of target instance is fairly large, then you may want to increase waitBetweenRetries and maxRetries values.
+func NewRetryConfig(maxRetries int, waitBetweenRetries time.Duration) retryConfig {
+	return retryConfig{
+		maxRetries:         maxRetries,
+		waitBetweenRetries: waitBetweenRetries,
+	}
+}
+
+// NewRetryDefaultConfig is like NewRetryConfig but it creates a retryConfig with fixed values where
+// maxRetries is 5, and waitBetweenRetries is 5 seconds.
+// This should be appropriate for a wide variety of test commands
+func NewRetryDefaultConfig() retryConfig {
+	return NewRetryConfig(5, 5*time.Second)
 }

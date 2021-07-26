@@ -3,7 +3,6 @@ package tester
 import (
 	"fmt"
 	"testing"
-	"time"
 )
 
 // TcpConnectionTestWithTagName return true if instances are found and all instance can run connection command successfully.
@@ -22,8 +21,8 @@ import (
 // maxRetries specifies the number of times the test should poll AWS API for results of the command sent to the target EC2 VMs.
 // waitBetweenRetires specifies the duration in time.Seconds to wait between each retry.
 // these values may need to be adjusted for the total number of ec2 instances that are expected to run the test command.
-func TcpConnectionTestWithTagName(t *testing.T, client commandSenderLister, tagName string, endpoint string, port string, maxRetries int, waitBetweenRetries time.Duration) {
-	_, err := TcpConnectionTestWithTagNameE(t, client, tagName, endpoint, port, maxRetries, waitBetweenRetries)
+func TcpConnectionTestWithTagName(t *testing.T, client commandSenderLister, tagName string, endpoint string, port string, retryConfig retryConfig) {
+	_, err := TcpConnectionTestWithTagNameE(t, client, tagName, endpoint, port, retryConfig)
 	if err != nil {
 		t.Error(err)
 	}
@@ -33,12 +32,12 @@ func TcpConnectionTestWithTagName(t *testing.T, client commandSenderLister, tagN
 // It returns false and an error if no instances are found to match the Name tag.
 // It returns false and an error if any one of the instances cannot run the command successfully or within timeout.
 // It returns false and error for any other error.
-func TcpConnectionTestWithTagNameE(t *testing.T, client commandSenderLister, tagName, endpoint string, port string, maxRetries int, waitBetweenRetries time.Duration) (bool, error) {
+func TcpConnectionTestWithTagNameE(t *testing.T, client commandSenderLister, tagName, endpoint string, port string, retryConfig retryConfig) (bool, error) {
 	// build target using tagName
 	target := NewTagNameTarget(tagName)
 	// build testCase with bash command to check tcp connectivity
 	testCase := NewShellTestCase(tcpConnectionTestShellCommand(3, endpoint, port), true)
-	return RunTestCaseForTargetE(t, client, testCase, target, maxRetries, waitBetweenRetries)
+	return RunTestCaseForTargetE(t, client, testCase, target, retryConfig)
 }
 
 func tcpConnectionTestShellCommand(timeoutInSeconds int, endpoint string, port string) string {

@@ -8,6 +8,9 @@
 Infrastructure testing helper for AWS Resources that uses AWS SSM to remotely execute commands on EC2 machines, to enable infrastructure engineering teams to write 
 tests that validate *behaviour*.
 
+## Demo
+![automate infrastructure behaviour testing](https://i.ibb.co/cgbthDN/terminal-screenshot.png)
+
 ## Why 
 
 ### Validating infrastructure without ssh
@@ -15,8 +18,8 @@ tests that validate *behaviour*.
 * Modern cloud architecture is moving away from ssh, and without access to instance it is hard to validate certain behaviour.
 * Manually running commands to validate infrastructure correctness is slow and unreliable.
 * This means some behaviour may only get tested when we run an application on the provisioned infrastructure app on it, eg. connectivity to database, connectivity to required internet endpoint.
-This means really slow feedback, which in turn means low quality. The application delivery team is a consumer/customer of the the infrastructure delivery team. 
-A infrastructure delivery team should not have to rely on it's customers to validate to its code.
+This slows the feedback loop in turn means lower quality. The application delivery team is a consumer/customer of the the infrastructure delivery team. 
+An infrastructure delivery team should not have to rely on it's customers to validate to its code.
 * Additionally some behaviour is hard to validate, and wont get immediately feedback with even application running correctly on the provisioned infra. Example:
     * Broken connectivity to logging endpoints/service may only get detected if a team member notices missing logs, often these are not even being looked at in lower environments. Or worse it may only be
     detected when instance in production start falling over since their disks have gone to full from failing to flush logs to a remote logging service.
@@ -68,9 +71,7 @@ consider layering on AWS SSM required resources
 3. Initialise retry config - this is used to manage to polling for the test result
     ```go
     	// create retry configuration for
-    	// the tester the number of times the tester should retry polling for the result of the test command
-    	maxRetriesToPollResult := 5
-    	waitBetweenRetries := 3 * time.Second
+	    retryConfig := tester.NewRetryDefaultConfig()
     ```
 4. Write some tests  
     ```go
@@ -83,7 +84,7 @@ consider layering on AWS SSM required resources
            target := tester.NewTagNameTarget(terraform.Output(t, terraformOptions, "app_instance_name_tag"))
    
            // 4.3 run the test 
-           tester.RunTestCaseForTarget(t, ssmClient, testCase, target, maxRetriesToPollResult, waitBetweenRetries)   
+           tester.RunTestCaseForTarget(t, ssmClient, testCase, target, retryConfig)   
        })
     ```
 ### More examples 
@@ -97,7 +98,7 @@ Write some tests with built in [TcpConnectionTestWithTagName](https://pkg.go.dev
         tag := "app_instance_name_tag" 
    
         // run the test
-        tester.TcpConnectionTestWithTagName(t, ssmClient, tag, dbEndpoint, dbPort, maxRetriesToPollResult, waitBetweenRetries)
+        tester.TcpConnectionTestWithTagName(t, ssmClient, tag, dbEndpoint, dbPort, retryConfig)
     })
 ```
    
@@ -120,7 +121,7 @@ Write some tests with using [terratest](https://terratest.gruntwork.io), please 
         tag := terraform.Output(t, terraformOptions, "instance_name_tag")
    
         // run the test 
-        tester.TcpConnectionTestWithTagName(t, ssmClient, tag, dbEndpoint, dbPort, maxRetriesToPollResult, waitBetweenRetries)    
+        tester.TcpConnectionTestWithTagName(t, ssmClient, tag, dbEndpoint, dbPort, retryConfig)    
     })
 ``` 
 
@@ -135,7 +136,7 @@ Write negative tests
           target := tester.NewTagNameTarget(terraform.Output(t, terraformOptions, "instance_name_tag"))
    
           // run the test
-          tester.RunTestCaseForTarget(t, ssmClient, testCase, target, maxRetriesToPollResult, waitBetweenRetries)
+          tester.RunTestCaseForTarget(t, ssmClient, testCase, target, retryConfig)
     })
 ```
    
@@ -150,6 +151,6 @@ Write tests to app instances have the required IAM, and networking configuration
           target := tester.NewTagNameTarget(terraform.Output(t, terraformOptions, "instance_name_tag"))
    
           // run the test
-          tester.RunTestCaseForTarget(t, ssmClient, testCase, target, maxRetriesToPollResult, waitBetweenRetries)
+          tester.RunTestCaseForTarget(t, ssmClient, testCase, target, retryConfig)
     })
 ```
