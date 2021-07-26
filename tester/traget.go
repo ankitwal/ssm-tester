@@ -2,7 +2,6 @@ package tester
 
 import "github.com/aws/aws-sdk-go-v2/service/ssm/types"
 
-
 // TagNameTarget fulfills the tagParamBuilder interface for targets instances to be selected by the tag:Name
 type TagNameTarget struct {
 	tagNameValue string // the string tagNameValue that should be the

@@ -13,13 +13,13 @@ func TestShellTestCase(t *testing.T) {
 		{
 			NewShellTestCase("timeout 3 bash -c '</dev/tcp/google.com/443'", true),
 			map[string][]string{
-				"commands":         []string{`$(timeout 3 bash -c '</dev/tcp/google.com/443');if [ $? -eq 0 ];then $(exit 0);else $(exit 1);fi`},
+				"commands": []string{`$(timeout 3 bash -c '</dev/tcp/google.com/443');if [ $? -eq 0 ];then $(exit 0);else $(exit 1);fi`},
 			},
 		},
 		{
 			shellTestCase: NewShellTestCase("curl google.com", false),
 			expectedCommandParameters: map[string][]string{
-				"commands":         []string{`$(curl google.com);if [ $? -eq 0 ];then $(exit 1);else $(exit 0);fi`},
+				"commands": []string{`$(curl google.com);if [ $? -eq 0 ];then $(exit 1);else $(exit 0);fi`},
 			},
 		},
 	}

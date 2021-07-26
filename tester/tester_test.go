@@ -54,7 +54,7 @@ func mockSendCommandHelper(t *testing.T, target TagNameTarget, testCase ShellTes
 	}
 }
 
-func TestUseThisToTestE(t *testing.T) {
+func TestRunTestCaseForTargetE(t *testing.T) {
 	var cases = []struct {
 		caseName      string
 		client        func(t *testing.T) *mockClient

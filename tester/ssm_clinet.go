@@ -16,4 +16,3 @@ func NewSSMClientWithDefaultConfig(t *testing.T) *ssm.Client {
 	}
 	return ssm.NewFromConfig(config)
 }
-
