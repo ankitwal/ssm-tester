@@ -23,7 +23,7 @@ import (
 // waitBetweenRetires specifies the duration in time.Seconds to wait between each retry.
 // These values may need to be adjusted for type of command and the total number of ec2 instances that are expected to run the test command.
 func RunTestCaseForTarget(t *testing.T, client commandSenderLister, testCase commandParameterBuilder, target targetParamBuilder,
-	retryConfig retryConfig) {
+	retryConfig RetryConfig) {
 	_, err := RunTestCaseForTargetE(t, client, testCase, target, retryConfig)
 	if err != nil {
 		t.Error(err)
@@ -35,7 +35,7 @@ func RunTestCaseForTarget(t *testing.T, client commandSenderLister, testCase com
 // It returns false and an error if any one of the instances cannot run the command successfully or within timeout.
 // It returns false and error for any other error.
 func RunTestCaseForTargetE(t *testing.T, client commandSenderLister, testCase commandParameterBuilder, target targetParamBuilder,
-	retryConfig retryConfig) (bool, error) {
+	retryConfig RetryConfig) (bool, error) {
 	// send test command
 	sendCommandInput := newSendCommandInput(testCase, target)
 	sendCommandOutput, err := client.SendCommand(context.Background(), sendCommandInput)
@@ -132,7 +132,7 @@ func (err failedForInstanceIdError) Error() string {
 	return fmt.Sprintf("command invocations failed for instanceId %s", err.instanceId)
 }
 
-type retryConfig struct {
+type RetryConfig struct {
 	maxRetries         int
 	waitBetweenRetries time.Duration
 }
@@ -143,16 +143,16 @@ type retryConfig struct {
 //
 // These values may need to be adjusted if the test command is expected to be long running, or the total number
 // of target instance is fairly large, then you may want to increase waitBetweenRetries and maxRetries values.
-func NewRetryConfig(maxRetries int, waitBetweenRetries time.Duration) retryConfig {
-	return retryConfig{
+func NewRetryConfig(maxRetries int, waitBetweenRetries time.Duration) RetryConfig {
+	return RetryConfig{
 		maxRetries:         maxRetries,
 		waitBetweenRetries: waitBetweenRetries,
 	}
 }
 
-// NewRetryDefaultConfig is like NewRetryConfig but it creates a retryConfig with fixed values where
+// NewRetryDefaultConfig is like NewRetryConfig but it creates a RetryConfig with fixed values where
 // maxRetries is 5, and waitBetweenRetries is 5 seconds.
 // This should be appropriate for a wide variety of test commands
-func NewRetryDefaultConfig() retryConfig {
+func NewRetryDefaultConfig() RetryConfig {
 	return NewRetryConfig(5, 5*time.Second)
 }
