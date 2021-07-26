@@ -10,6 +10,14 @@ tests that validate *behaviour*.
 
 ![automate infrastructure behaviour testing](https://i.ibb.co/cgbthDN/terminal-screenshot.png)
 
+## Contents 
+
+- [Why](#why)
+- [Quick Start](#quick-start)
+- [More Examples](#more-examples)
+- [GoDoc](https://pkg.go.dev/github.com/ankitwal/ssm-tester/tester)
+- [Working Example](./examples/simple-example/README.md)
+
 ## Why 
 
 ### Validating infrastructure
