@@ -12,18 +12,16 @@ tests that validate *behaviour*.
 
 ### Testing Behaviour vs Configuration 
 When we write infrastructure as code - we want to not only test against the configuration we create but also test the our infrastructure for *behaviour*!
-Specially when we write infrastructure code in declarative tooling like terraform, tests that validate configuration may have limited value.
-For example, validating for *configuration* - 
+Specially when we write infrastructure code in declarative tooling like terraform, tests that validate configuration may have limited value.  
+For example, validating for **configuration**:  
 * does my security group have outgoing allowed to the RDS Security group
 * does my application subnet network ACL have rules allowing outgoing to the RDS Subnet
 * does my application subnet network ACL have rules allowing ephemeral ports open for return traffic from RDS subnets
 * does my application subnet have a route table attached with routes to the database subnet 
 
 These tests may essentially be a repeat of the configuration specified in our Infrastructure declarative code
-and does not validate the behaviour we want to guarantee in our infrastructure. 
-
-
-Instead it would be better if we could write tests to validate *behaviour*.
+and does not validate the behaviour we want to guarantee in our infrastructure.  
+Instead it would be better if we could write tests to validate **behaviour**: 
 * does my provisioned infrastructure allow my application EC2 instances to connect via TCP to my RDS endpoint. 
     * this would ideally validate that the configuration for security groups, subnets, NACLs, route tables cumulatively allows this behaviour.  
 * can my provisioned instance pull a required secret from secrets manager
