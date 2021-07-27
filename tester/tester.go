@@ -16,12 +16,10 @@ import (
 // It fails the test if any one of the instances cannot run the testCase successfully or within timeout, or any other error.
 // It passes the test if all found instances targets run the testCase successfully in the given timeouts.
 //
-// testCase is provides to configuration for the SSM SenCommandInput Parameters that define what command to run on the target instances.
-// target provides the the configuration of which ec2 instances should be targeted for the test.
+// testCase provides configuration for what command to send via the SendCommand API of SSM and whether to check for success or failure.
+// target provides the configuration of which ec2 instances should be targeted for the test.
 //
-// maxRetries specifies the number of times the test should poll AWS API for results of the command sent to the target EC2 VMs.
-// waitBetweenRetires specifies the duration in time.Seconds to wait between each retry.
-// These values may need to be adjusted for type of command and the total number of ec2 instances that are expected to run the test command.
+// retryConfig provides configuration for how the tester would poll aws ssm api for the test results
 func RunTestCaseForTarget(t *testing.T, client commandSenderLister, testCase commandParameterBuilder, target targetParamBuilder,
 	retryConfig RetryConfig) {
 	_, err := RunTestCaseForTargetE(t, client, testCase, target, retryConfig)
@@ -31,6 +29,7 @@ func RunTestCaseForTarget(t *testing.T, client commandSenderLister, testCase com
 }
 
 // RunTestCaseForTargetE is like RunTestCaseForTarget but returns a bool and error
+// It returns true and nil if instances are found and all instance can run connection command successfully.
 // It returns false and an error if no instances are found to match the Name tag.
 // It returns false and an error if any one of the instances cannot run the command successfully or within timeout.
 // It returns false and error for any other error.
@@ -132,6 +131,8 @@ func (err failedForInstanceIdError) Error() string {
 	return fmt.Sprintf("command invocations failed for instanceId %s", err.instanceId)
 }
 
+// RetryConfig contains configuration for the testers retry logic while polling AWS SSM API for test results.
+// It should be configured with larger values for commands that take longer to run, may have to run on a large number ec2 targets
 type RetryConfig struct {
 	maxRetries         int
 	waitBetweenRetries time.Duration

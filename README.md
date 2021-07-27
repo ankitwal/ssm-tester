@@ -23,33 +23,33 @@ tests that validate *behaviour*.
 ### Validating infrastructure
 
 * Manually running commands to validate infrastructure correctness is slow and unreliable.
-* At times access like ssh may not even be possbile to all instances in a cloud environment, making validation even harder.
+* At times access like ssh may not even be possible to all instances in a cloud environment, making validation even harder.
 * This means some behaviour may only get tested when we run an application on the provisioned infrastructure, eg. connectivity to database, connectivity to required internet endpoint etc.
 This slows the feedback loop and in turn means lower quality. The application delivery team is a consumer/customer of the infrastructure delivery team. 
 Hence an infrastructure delivery team should not have to rely on its customers to validate its code.
 * Additionally some behaviour is hard to validate, and won't get immediate feedback even with an application running functionally correctly on the provisioned infra. Example:
     * Broken connectivity to logging endpoints/service may only be detected if a team member notices missing logs, often these are not even being looked at in lower environments. Or worse it may only be detected when instance in production start falling over since their disks have gone to full from failing to flush logs to a remote logging service.
 
-ssm-tester allows infrastructure delivery teams to write tests that can execute custom commands on ec2 instances and hence validate for otherwise hard to test behaviour.
+`ssm-tester` allows infrastructure delivery teams to write tests that can execute custom commands on ec2 instances and hence validate for otherwise hard to test behaviour.
 
 ### Testing Behaviour over Configuration 
-When we write infrastructure as code - we want to not only test against the configuration we create, but also test the infrastructure for *behaviour*!
-Specially when we write infrastructure code in declarative tooling like terraform, tests that validate configuration may have limited value.  
+When teams write infrastructure as code - they should not only test against the correct configuration, but also test the infrastructure for *behaviour*!
+Specially when writing infrastructure code in a declarative tooling like terraform, tests that validate configuration may have limited value.  
 For example, validating for **configuration**:  
-* does my security group have outgoing allowed to the RDS Security group
-* does my application subnet network ACL have rules allowing outgoing to the RDS Subnet
-* does my application subnet network ACL have rules allowing ephemeral ports open for return traffic from RDS subnets
-* does my application subnet have a route table attached with routes to the database subnet 
+* Does this security group have outgoing allowed to the RDS Security group
+* Does this application subnet network ACL have rules allowing outgoing to the RDS Subnet
+* Does this application subnet network ACL have rules allowing ephemeral ports open for return traffic from RDS subnets
+* Does this application subnet have a route table attached with routes to the database subnet 
 
 These tests may essentially be a repeat of the configuration specified in our Infrastructure declarative code
 and do not validate the behaviour we want to guarantee in our infrastructure.  
 Instead it would be better if we could write tests to validate **behaviour**: 
-* does my provisioned infrastructure allow my application EC2 instances to connect via TCP to my RDS endpoint 
-    * this would ideally validate that the configuration for security groups, subnets, NACLs, route tables cumulatively allows this behaviour.  
-* can my provisioned instance pull a required secret from secrets manager
-    * this would validate that required networking configuration + IAM Instance Profile + Role configuration cumulatively allows for this behaviour 
+* Does the provisioned infrastructure allow my application EC2 instances to connect via TCP to my RDS endpoint 
+    * This would ideally validate that the configuration for security groups, subnets, NACLs, route tables cumulatively allows this behaviour.
+* Can the provisioned instance pull a required secret from secrets manager
+    * This would validate that required networking configuration + IAM Instance Profile + Role configuration cumulatively allows for this behaviour.
 
-ssm-tester enables users to write automated tests that validate behaviour, so infrastructure engineering teams do not have to wait for application teams to report
+`ssm-tester` enables users to write automated tests that validate behaviour, so infrastructure engineering teams do not have to wait for application teams to report
 broken infrastructure, or worse, wait for incidents in production. 
 
 ## Quick Start 
@@ -146,7 +146,9 @@ Write negative tests
     })
 ```
    
-Write tests to app instances have the required IAM, and networking configuration to be able to pull secrets that might be required by app
+Write tests to validate that app instances can pull secrets that are be required by app, 
+hence validating the IAM instance profile, role, and related networking configuration cumulatively. 
+
 ```go
     t.Run("TestAppInstanceShouldNOTHaveConnectivityToPublicInternet", func(t *testing.T) {
           // build a testCase command that validates that the instance has networking and IAM access to a secret that will be required by the application 

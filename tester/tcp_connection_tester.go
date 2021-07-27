@@ -5,12 +5,12 @@ import (
 	"testing"
 )
 
-// TcpConnectionTestWithTagName return true if instances are found and all instance can run connection command successfully.
-// It is meant as a helper and to demonstrate how to use tester.RunTestCaseForTarget for other custom tests.
+// TcpConnectionTestWithTagName is meant as a helper and to demonstrate how to use tester.RunTestCaseForTarget for other custom tests.
 // It configures the test command as "timeout 3 bash -c '</dev/tcp/endpoint/port'", which should test tcp connectivity to endpoint:port
 // in 3 seconds or fail. The command relies on native bash capability and hence has minimal dependency on installed binaries and should work across wide
 // range of linux/mac systems (as opposed to using netcat or curl for example).
 //
+// It passes the test if instances are found and all instance can run connection command successfully.
 // It fails the test if no instances are found to match the Name tag.
 // It fails the test if any one of the instances cannot run the command successfully or within timeout, or any other error.
 // It passes the test if all found instances for tag Name run the command successfully in the given timeouts.
@@ -29,6 +29,7 @@ func TcpConnectionTestWithTagName(t *testing.T, client commandSenderLister, tagN
 }
 
 // TcpConnectionTestWithTagNameE is like TcpConnectionTestWithTagName but returns a bool and error.
+// It returns true and nil if instances are found and all instance can run connection command successfully.
 // It returns false and an error if no instances are found to match the Name tag.
 // It returns false and an error if any one of the instances cannot run the command successfully or within timeout.
 // It returns false and error for any other error.
