@@ -150,7 +150,7 @@ Write tests to validate that app instances can pull secrets that are be required
 hence validating the IAM instance profile, role, and related networking configuration cumulatively. 
 
 ```go
-    t.Run("TestAppInstanceShouldNOTHaveConnectivityToPublicInternet", func(t *testing.T) {
+    t.Run("TestAppInstanceShouldBeAbleToAccessRequiredSecret", func(t *testing.T) {
           // build a testCase command that validates that the instance has networking and IAM access to a secret that will be required by the application 
           // this relies on aws cli being installed on the instance(AMI) being targeted.  
     	testCase := tester.NewShellTestCase(`aws secretsmanager list-secret-version-ids --secret-id "secret-required-by-app"`), true)
